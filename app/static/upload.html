@@ -72,7 +72,8 @@
         </div>
     </div>
     <script>
-        const API_KEY = 'dev-api-key-change-me'; // MVP: hardcoded. Phase 2: Firebase Auth.
+        const API_KEY = new URLSearchParams(window.location.search).get('api_key') || localStorage.getItem('pe_api_key') || prompt('Enter your API key:');
+	if (API_KEY) localStorage.setItem('pe_api_key', API_KEY);
 
         // File handling
         const dropZone = document.getElementById('dropZone');

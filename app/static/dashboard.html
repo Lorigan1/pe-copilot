@@ -67,8 +67,10 @@
         </div>
     </div>
     <script>
-        const API_KEY = 'dev-api-key-change-me';
-        const FUND_ID = new URLSearchParams(window.location.search).get('fund_id') || '';
+        const params = new URLSearchParams(window.location.search);
+	const API_KEY = params.get('api_key') || localStorage.getItem('pe_api_key') || prompt('Enter your API key:');
+	if (API_KEY) localStorage.setItem('pe_api_key', API_KEY);
+        const FUND_ID = params.get('fund_id') || '';
 
         function formatCurrency(val) {
             if (val == null) return '—';
