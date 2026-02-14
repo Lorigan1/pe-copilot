@@ -28,8 +28,8 @@ class Settings(BaseSettings):
 
     # ─── Claude API ───
     anthropic_api_key: str = ""
-    claude_model_normalisation: str = "claude-sonnet-4-5-20250514"
-    claude_model_summarisation: str = "claude-sonnet-4-5-20250514"
+    claude_model_normalisation: str = "claude-sonnet-4-5-20250929"
+    claude_model_summarisation: str = "claude-sonnet-4-5-20250929"
     claude_model_fast: str = "claude-haiku-4-5-20251001"
 
     # ─── SendGrid ───
