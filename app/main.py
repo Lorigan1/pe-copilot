@@ -1,6 +1,7 @@
 """PE CoPilot — FastAPI application entry point."""
 
 import logging
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -37,7 +38,8 @@ app.include_router(digest.router)
 app.include_router(export.router)
 
 # ─── Static files (upload form + dashboard) ───
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+_static_dir = Path(__file__).parent / "static"
+app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
 
 # ─── Health check ───

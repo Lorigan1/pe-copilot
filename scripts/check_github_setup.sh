@@ -17,9 +17,9 @@ pass=0
 fail=0
 warn=0
 
-check_pass()  { echo -e "  ${GREEN}✓${NC} $1"; ((pass++)); }
-check_fail()  { echo -e "  ${RED}✗${NC} $1"; ((fail++)); }
-check_warn()  { echo -e "  ${YELLOW}⚠${NC} $1"; ((warn++)); }
+check_pass()  { echo -e "  ${GREEN}✓${NC} $1"; pass=$((pass + 1)); }
+check_fail()  { echo -e "  ${RED}✗${NC} $1"; fail=$((fail + 1)); }
+check_warn()  { echo -e "  ${YELLOW}⚠${NC} $1"; warn=$((warn + 1)); }
 section()     { echo -e "\n${BOLD}$1${NC}"; }
 
 # ── Prerequisites ──────────────────────────────────────────────
@@ -130,7 +130,7 @@ fi
 # ── Secrets (for CI/CD) ──────────────────────────────────────
 section "Repository Secrets (needed for CI/CD deploy)"
 
-REQUIRED_SECRETS=("GCP_PROJECT_ID" "GCP_WORKLOAD_IDENTITY_PROVIDER" "GCP_SERVICE_ACCOUNT" "ANTHROPIC_API_KEY")
+REQUIRED_SECRETS=("GCP_PROJECT_ID" "WIF_PROVIDER" "WIF_SERVICE_ACCOUNT" "ANTHROPIC_API_KEY")
 
 if [[ -n "${REPO:-}" ]]; then
     EXISTING_SECRETS=$(gh secret list --repo "$REPO" 2>/dev/null || echo "")
