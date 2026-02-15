@@ -171,7 +171,7 @@
             hideStatus();
         }
 
-        // ─── Upload & Process ───
+        // ─── Upload & Poll for Processing ───
         document.getElementById('uploadForm').addEventListener('submit', async e => {
             e.preventDefault();
             if (!selectedFile) return;
@@ -182,11 +182,11 @@
             if (!period) { showStatus('error', 'Please enter a reporting period'); return; }
 
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Processing…';
+            submitBtn.textContent = 'Uploading…';
             document.getElementById('progressArea').style.display = 'block';
 
             try {
-                // Step 1: Upload
+                // Step 1: Upload (processing triggers automatically via Pub/Sub)
                 setStep(1, 'active');
                 setProgress(15);
                 showStatus('info', 'Uploading file…');
@@ -210,29 +210,18 @@
 
                 const update = await uploadRes.json();
                 setStep(1, 'done');
-                setProgress(35);
+                setProgress(30);
 
-                // Step 2: Process
+                // Step 2: Poll for processing completion
                 setStep(2, 'active');
-                showStatus('info', 'Extracting and normalising data…');
-                setProgress(50);
+                submitBtn.textContent = 'Processing…';
+                showStatus('info', 'File uploaded — processing started automatically…');
+                setProgress(45);
 
-                const processRes = await fetch(`/api/v1/process/${update.id}`, {
-                    method: 'POST',
-                    headers: { 'X-API-Key': API_KEY },
-                });
-
-                if (!processRes.ok) {
-                    const err = await processRes.json();
-                    throw new Error(err.detail || 'Processing failed');
-                }
-
-                const result = await processRes.json();
-                setStep(2, 'done');
-                setStep(3, 'active');
-                setProgress(85);
+                const result = await pollForCompletion(update.id, period);
 
                 // Step 3: Done
+                setStep(2, 'done');
                 setStep(3, 'done');
                 setProgress(100);
 
@@ -260,6 +249,47 @@
                 submitBtn.disabled = false;
             }
         });
+
+        async function pollForCompletion(updateId, period) {
+            const maxAttempts = 60;  // 3 minutes at 3-second intervals
+            const intervalMs = 3000;
+            let progress = 45;
+
+            for (let i = 0; i < maxAttempts; i++) {
+                await new Promise(resolve => setTimeout(resolve, intervalMs));
+
+                const res = await fetch(`/api/v1/process/${updateId}/status`, {
+                    headers: { 'X-API-Key': API_KEY },
+                });
+
+                if (!res.ok) continue;  // Retry on transient errors
+
+                const update = await res.json();
+                const status = update.processing_status;
+
+                // Update progress bar gradually
+                if (progress < 90) {
+                    progress = Math.min(90, progress + 3);
+                    setProgress(progress);
+                }
+
+                if (status === 'processing') {
+                    setStep(3, 'active');
+                    showStatus('info', 'Normalising with AI…');
+                }
+
+                // Terminal states
+                if (['completed', 'needs_review', 'failed'].includes(status)) {
+                    return update;
+                }
+            }
+
+            // Timeout — processing is still PENDING/PROCESSING
+            throw new Error(
+                'Processing is taking longer than expected. ' +
+                'Check the dashboard in a few minutes — your file was uploaded successfully.'
+            );
+        }
 
         function showStatus(type, msg) {
             const el = document.getElementById('status');

@@ -14,6 +14,18 @@ router = APIRouter(
 )
 
 
+@router.get("/{update_id}/status", response_model=Update)
+async def get_update_status(update_id: str) -> Update:
+    """Get the current processing status of an update.
+
+    Used by the upload form to poll for completion after Pub/Sub triggers processing.
+    """
+    update = await firestore_service.get_update(update_id)
+    if not update:
+        raise HTTPException(status_code=404, detail="Update not found")
+    return update
+
+
 @router.post("/{update_id}", response_model=Update)
 async def process_update(update_id: str) -> Update:
     """Trigger the normalisation pipeline for a pending update.

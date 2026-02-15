@@ -1,6 +1,6 @@
 """Ingestion endpoints — file upload and (later) email ingestion."""
 
-import os
+import logging
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -9,7 +9,10 @@ from app.config import settings
 from app.dependencies import verify_api_key
 from app.models.update import SourceFileType, SourceType, Update, UpdateCreate
 from app.services.firestore import firestore_service
+from app.services.pubsub import pubsub_service
 from app.services.storage import storage_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/api/v1/ingest",
@@ -37,7 +40,7 @@ async def upload_file(
 
     Accepts: .xlsx, .xls, .csv, .pdf
     The file is stored in GCS and an update record is created in Firestore
-    with status=pending. Processing is triggered by the GCS event.
+    with status=pending. Processing is triggered via Pub/Sub.
     """
     # Validate file extension
     if not file.filename:
@@ -59,27 +62,66 @@ async def upload_file(
             detail=f"File too large ({size_mb:.1f}MB). Max: {settings.max_upload_size_mb}MB",
         )
 
-    # Upload to GCS
-    gcs_path = await storage_service.upload_raw_file(
-        fund_id=fund_id,
-        company_id=company_id,
-        filename=file.filename,
-        contents=contents,
-        content_type=file.content_type or "application/octet-stream",
-    )
+    # ─── Step 1: Upload to GCS ───
+    try:
+        gcs_path = await storage_service.upload_raw_file(
+            fund_id=fund_id,
+            company_id=company_id,
+            filename=file.filename,
+            contents=contents,
+            content_type=file.content_type or "application/octet-stream",
+        )
+        logger.info("File uploaded to GCS: %s", gcs_path)
+    except Exception as exc:
+        logger.error("GCS upload failed for %s: %s", file.filename, exc)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to upload file to storage: {exc}",
+        ) from exc
 
-    # Create update record
-    source_file_type = EXTENSION_MAP.get(ext, SourceFileType.EXCEL)
-    update_data = UpdateCreate(
-        fund_id=fund_id,
-        company_id=company_id,
-        source_type=SourceType.MANUAL_UPLOAD,
-        source_file_type=source_file_type,
-        raw_file_urls=[gcs_path],
-        metrics_period=period,
-    )
+    # ─── Step 2: Create Firestore update record (with GCS cleanup on failure) ───
+    try:
+        source_file_type = EXTENSION_MAP.get(ext, SourceFileType.EXCEL)
+        update_data = UpdateCreate(
+            fund_id=fund_id,
+            company_id=company_id,
+            source_type=SourceType.MANUAL_UPLOAD,
+            source_file_type=source_file_type,
+            raw_file_urls=[gcs_path],
+            metrics_period=period,
+        )
+        update = await firestore_service.create_update(update_data)
+        logger.info("Firestore update record created: %s", update.id)
 
-    update = await firestore_service.create_update(update_data)
+    except Exception as exc:
+        # Transaction safety: clean up the GCS file if Firestore fails
+        logger.error("Firestore create failed, cleaning up GCS file %s: %s", gcs_path, exc)
+        try:
+            await storage_service.delete_file(gcs_path)
+        except Exception as cleanup_exc:
+            logger.error("GCS cleanup also failed for %s: %s", gcs_path, cleanup_exc)
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create update record: {exc}",
+        ) from exc
+
+    # ─── Step 3: Publish Pub/Sub event to trigger processing ───
+    # Non-blocking: if Pub/Sub fails, the upload still succeeds.
+    # The update stays PENDING and can be reprocessed manually.
+    try:
+        await pubsub_service.publish_file_ingestion_event(
+            update_id=update.id,
+            fund_id=fund_id,
+            company_id=company_id,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Pub/Sub publish failed for update %s (upload still succeeded, "
+            "update is PENDING — reprocess manually if needed): %s",
+            update.id, exc,
+        )
+
     return update
 
 

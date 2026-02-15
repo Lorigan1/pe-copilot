@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     gcs_raw_uploads_bucket: str = "pe-copilot-raw-uploads"
     gcs_reports_bucket: str = "pe-copilot-reports"
 
+    # ─── Pub/Sub ───
+    pubsub_file_ingestion_topic: str = "file-ingestion-events"
+
     # ─── Claude API ───
     anthropic_api_key: str = ""
     claude_model_normalisation: str = "claude-sonnet-4-5-20250929"
