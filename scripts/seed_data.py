@@ -229,10 +229,44 @@ async def seed():
             primary_contact_name="Priya Sharma",
             primary_contact_email="priya@brightpath.example.com",
             canonical_metrics=DEFAULT_PE_METRICS,
+            label_mappings=[
+                LabelMapping(label="Total Income", metric_name="revenue"),
+                LabelMapping(label="Total Cost of Sales", metric_name="cost_of_sales"),
+                LabelMapping(label="Gross Profit", metric_name="gross_profit"),
+                LabelMapping(label="Total Expenses", metric_name="total_expenses"),
+                LabelMapping(label="Depreciation", metric_name="depreciation"),
+                LabelMapping(label="EBITDA", metric_name="ebitda"),
+                LabelMapping(label="Net Profit", metric_name="net_income"),
+                LabelMapping(label="Cash and Bank Accounts", metric_name="cash_balance"),
+                LabelMapping(label="Total Debt Outstanding", metric_name="total_debt"),
+                LabelMapping(label="Net Assets", metric_name="net_assets"),
+                LabelMapping(label="Headcount", metric_name="headcount"),
+            ],
+            calculation_rules=[
+                CalculationRule(
+                    metric_name="gross_profit",
+                    source_label="Gross Profit",
+                    formula="revenue - cost_of_sales",
+                    description="Revenue minus Cost of Sales (Xero stores costs as positive)",
+                ),
+                CalculationRule(
+                    metric_name="ebitda",
+                    source_label="EBITDA",
+                    formula="revenue - cost_of_sales - total_expenses + depreciation",
+                    description="Gross Profit minus opex plus depreciation add-back",
+                ),
+                CalculationRule(
+                    metric_name="net_income",
+                    source_label="Net Profit",
+                    formula="revenue - cost_of_sales - total_expenses",
+                    description="Revenue minus all costs",
+                ),
+            ],
             mapping_instructions=(
                 "BrightPath exports from Xero as CSV. Flat file format. "
-                "Revenue is 'Total Income'. They don't separate EBITDA — "
-                "calculate from 'Total Income' minus 'Total Expenses' plus 'Depreciation'."
+                "Revenue is 'Total Income'. Costs are stored as positive numbers (Xero convention). "
+                "Values marked [COMPUTED] have been pre-calculated deterministically — "
+                "use these values as-is, do not recalculate."
             ),
             reporting_frequency="monthly",
             accounting_system="Xero",
@@ -259,10 +293,58 @@ async def seed():
                     variance_threshold=0.15,
                 ),
             ],
+            label_mappings=[
+                # ─── P&L ───
+                LabelMapping(label="Turnover", metric_name="revenue"),
+                LabelMapping(label="Cost of Goods Sold", metric_name="cogs"),
+                LabelMapping(label="Gross Profit", metric_name="gross_profit"),
+                LabelMapping(label="Operating Expenses", metric_name="operating_expenses"),
+                LabelMapping(label="EBITDA", metric_name="ebitda"),
+                LabelMapping(label="Depreciation & Amortisation", metric_name="dep_amort"),
+                LabelMapping(label="Net Income", metric_name="net_income"),
+                # ─── Balance Sheet ───
+                LabelMapping(label="Bank & Cash", metric_name="cash_balance"),
+                LabelMapping(label="Term Loan", metric_name="term_loan"),
+                LabelMapping(label="Overdraft Facility", metric_name="overdraft"),
+                LabelMapping(label="Total Debt", metric_name="total_debt"),
+                LabelMapping(label="Net Assets", metric_name="net_assets"),
+                # ─── Operational KPIs ───
+                LabelMapping(label="Units Produced", metric_name="units_produced"),
+                LabelMapping(label="Headcount", metric_name="headcount"),
+            ],
+            calculation_rules=[
+                CalculationRule(
+                    metric_name="gross_profit",
+                    source_label="Gross Profit",
+                    formula="revenue - cogs",
+                    description="Turnover minus Cost of Goods Sold (QuickBooks stores costs as positive)",
+                ),
+                CalculationRule(
+                    metric_name="ebitda",
+                    source_label="EBITDA",
+                    formula="gross_profit - operating_expenses",
+                    description="Gross Profit minus Operating Expenses",
+                ),
+                CalculationRule(
+                    metric_name="net_income",
+                    source_label="Net Income",
+                    formula="ebitda - dep_amort",
+                    description="EBITDA minus Depreciation & Amortisation",
+                ),
+                CalculationRule(
+                    metric_name="total_debt",
+                    source_label="Total Debt",
+                    formula="term_loan + overdraft",
+                    description="Term Loan plus Overdraft Facility",
+                ),
+            ],
             mapping_instructions=(
                 "Helix sends a PDF board pack. Financial data is in tables on pages 3-5. "
                 "Revenue is 'Turnover'. Cash balance is 'Bank & Cash'. "
-                "They also report 'Units Produced' which maps to our operational KPI."
+                "They also report 'Units Produced' which maps to our operational KPI. "
+                "Costs are stored as positive values (QuickBooks convention). "
+                "Values marked [COMPUTED] have been pre-calculated deterministically — "
+                "use these values as-is, do not recalculate."
             ),
             reporting_frequency="quarterly",
             accounting_system="QuickBooks",

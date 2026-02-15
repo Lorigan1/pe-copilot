@@ -10,31 +10,61 @@
         .header { background: #1B4F72; color: white; padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
         .header h1 { font-size: 1.25rem; font-weight: 600; }
         .header a { color: #bee3f8; text-decoration: none; font-size: 0.875rem; }
-        .container { max-width: 600px; margin: 2rem auto; padding: 0 1rem; }
-        .card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 2rem; }
-        .card h2 { font-size: 1.25rem; margin-bottom: 1.5rem; color: #1B4F72; }
+        .container { max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+
+        .card { background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card h2 { font-size: 1.25rem; margin-bottom: 1.5rem; }
+
         .form-group { margin-bottom: 1.25rem; }
-        label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.375rem; color: #4a5568; }
-        select, input[type="text"] { width: 100%; padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9375rem; }
-        select:focus, input:focus { outline: none; border-color: #2E86C1; box-shadow: 0 0 0 3px rgba(46,134,193,0.15); }
-        .file-drop { border: 2px dashed #cbd5e0; border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.2s; }
-        .file-drop:hover, .file-drop.dragover { border-color: #2E86C1; background: #ebf8ff; }
-        .file-drop p { color: #718096; font-size: 0.9375rem; }
-        .file-drop .accepted { font-size: 0.8125rem; color: #a0aec0; margin-top: 0.5rem; }
-        .file-info { margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: #f0f9ff; border-radius: 4px; font-size: 0.875rem; color: #2b6cb0; }
-        .btn { display: block; width: 100%; padding: 0.75rem; background: #1B4F72; color: white; border: none; border-radius: 6px; font-size: 1rem; font-weight: 500; cursor: pointer; transition: background 0.2s; }
-        .btn:hover { background: #154360; }
+        .form-group label { display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.375rem; color: #4a5568; }
+        .form-group select,
+        .form-group input[type="text"],
+        .form-group input[type="month"] {
+            width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #e2e8f0; border-radius: 6px;
+            font-size: 0.9375rem; background: white; color: #1a202c;
+        }
+        .form-group select:focus,
+        .form-group input:focus { outline: none; border-color: #2E86C1; box-shadow: 0 0 0 3px rgba(46,134,193,0.15); }
+
+        .drop-zone {
+            border: 2px dashed #cbd5e0; border-radius: 8px; padding: 2rem;
+            text-align: center; cursor: pointer; transition: all 0.2s;
+        }
+        .drop-zone:hover, .drop-zone.dragover { border-color: #2E86C1; background: #ebf8ff; }
+        .drop-zone .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .drop-zone .text { font-size: 0.875rem; color: #718096; }
+        .drop-zone .filename { font-size: 0.9375rem; font-weight: 600; color: #2E86C1; margin-top: 0.5rem; }
+        .drop-zone input { display: none; }
+
+        .btn {
+            width: 100%; padding: 0.75rem; background: #2E86C1; color: white; border: none;
+            border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s;
+        }
+        .btn:hover { background: #1B6CA8; }
         .btn:disabled { background: #a0aec0; cursor: not-allowed; }
-        .status { margin-top: 1rem; padding: 0.75rem; border-radius: 6px; font-size: 0.875rem; }
-        .status.success { background: #f0fff4; color: #276749; border: 1px solid #c6f6d5; }
-        .status.error { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
-        .status.processing { background: #fefcbf; color: #975a16; border: 1px solid #fefcbf; }
+
+        .status { margin-top: 1.5rem; padding: 1rem; border-radius: 6px; font-size: 0.875rem; display: none; }
+        .status.info { display: block; background: #ebf8ff; color: #2E86C1; border: 1px solid #bee3f8; }
+        .status.success { display: block; background: #f0fff4; color: #38a169; border: 1px solid #c6f6d5; }
+        .status.error { display: block; background: #fff5f5; color: #e53e3e; border: 1px solid #fed7d7; }
+
+        .progress { margin-top: 0.75rem; }
+        .progress-bar { height: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden; }
+        .progress-bar .fill { height: 100%; background: #2E86C1; transition: width 0.3s; }
+
+        .step { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; font-size: 0.8125rem; }
+        .step .dot { width: 8px; height: 8px; border-radius: 50%; background: #cbd5e0; }
+        .step .dot.active { background: #2E86C1; }
+        .step .dot.done { background: #38a169; }
+        .step .dot.error { background: #e53e3e; }
+
+        .accepted-types { font-size: 0.75rem; color: #a0aec0; margin-top: 0.25rem; }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>PE CoPilot</h1>
-        <a href="/static/dashboard.html">Dashboard</a>
+        <a href="/static/dashboard.html" id="dashLink">Dashboard</a>
         <a href="/docs">API Docs</a>
     </div>
     <div class="container">
@@ -42,140 +72,209 @@
             <h2>Upload Financial Report</h2>
             <form id="uploadForm">
                 <div class="form-group">
-                    <label for="fund_id">Fund</label>
-                    <select id="fund_id" required>
-                        <option value="">Select fund...</option>
+                    <label for="company">Company</label>
+                    <select id="company" required>
+                        <option value="">Loading companies…</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="company_id">Portfolio Company</label>
-                    <select id="company_id" required>
-                        <option value="">Select company...</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="period">Reporting Period (optional)</label>
-                    <input type="text" id="period" placeholder="e.g. Jan 2026, Q4 2025">
+                    <label for="period">Reporting Period</label>
+                    <input type="text" id="period" placeholder="e.g. Jan 2026, Q4 2025, 2025-02" required>
                 </div>
                 <div class="form-group">
                     <label>File</label>
-                    <div class="file-drop" id="dropZone" onclick="document.getElementById('fileInput').click()">
-                        <p>Drop file here or click to browse</p>
-                        <p class="accepted">Accepted: .xlsx, .xls, .csv, .pdf (max 25MB)</p>
+                    <div class="drop-zone" id="dropZone">
+                        <div class="icon">📄</div>
+                        <div class="text">Drop file here or click to browse</div>
+                        <div class="filename" id="fileName"></div>
+                        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.pdf">
                     </div>
-                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.pdf" hidden>
-                    <div class="file-info" id="fileInfo" style="display:none"></div>
+                    <div class="accepted-types">Accepted: .xlsx, .xls, .csv, .pdf (max 10MB)</div>
                 </div>
                 <button type="submit" class="btn" id="submitBtn" disabled>Upload & Process</button>
-                <div id="status" class="status" style="display:none"></div>
             </form>
+            <div class="status" id="status"></div>
+            <div class="progress" id="progressArea" style="display:none;">
+                <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
+                <div class="step"><span class="dot" id="dot1"></span> Uploading file</div>
+                <div class="step"><span class="dot" id="dot2"></span> Processing & extracting</div>
+                <div class="step"><span class="dot" id="dot3"></span> Normalising with AI</div>
+            </div>
         </div>
     </div>
     <script>
-        const API_KEY = new URLSearchParams(window.location.search).get('api_key') || localStorage.getItem('pe_api_key') || prompt('Enter your API key:');
-	if (API_KEY) localStorage.setItem('pe_api_key', API_KEY);
+        const params = new URLSearchParams(window.location.search);
+        const API_KEY = params.get('api_key') || localStorage.getItem('pe_api_key') || prompt('Enter your API key:');
+        if (API_KEY) localStorage.setItem('pe_api_key', API_KEY);
+        const FUND_ID = params.get('fund_id') || localStorage.getItem('pe_fund_id') || '';
+        if (FUND_ID) localStorage.setItem('pe_fund_id', FUND_ID);
 
-        // File handling
+        // Pass fund_id to dashboard link
+        const dashLink = document.getElementById('dashLink');
+        if (FUND_ID) dashLink.href += `?fund_id=${FUND_ID}`;
+
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
-        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
         const submitBtn = document.getElementById('submitBtn');
         let selectedFile = null;
 
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        // ─── Company dropdown ───
+        async function loadCompanies() {
+            if (!FUND_ID) {
+                document.getElementById('company').innerHTML = '<option value="">No fund_id — add ?fund_id=X to URL</option>';
+                return;
+            }
+            try {
+                const res = await fetch(`/api/v1/companies?fund_id=${FUND_ID}`, {
+                    headers: { 'X-API-Key': API_KEY },
+                });
+                const companies = await res.json();
+                const select = document.getElementById('company');
+                select.innerHTML = '<option value="">Select company…</option>';
+                companies.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = `${c.name} (${c.sector || 'No sector'})`;
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                document.getElementById('company').innerHTML = '<option value="">Failed to load companies</option>';
+            }
+        }
+        loadCompanies();
+
+        // ─── File selection ───
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('drop', (e) => {
+        dropZone.addEventListener('drop', e => {
             e.preventDefault();
             dropZone.classList.remove('dragover');
-            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+            if (e.dataTransfer.files.length) selectFile(e.dataTransfer.files[0]);
         });
-        fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
+        fileInput.addEventListener('change', () => { if (fileInput.files.length) selectFile(fileInput.files[0]); });
 
-        function handleFile(file) {
+        function selectFile(file) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (!['xlsx', 'xls', 'csv', 'pdf'].includes(ext)) {
+                showStatus('error', `File type .${ext} not accepted. Use .xlsx, .xls, .csv, or .pdf`);
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                showStatus('error', 'File too large (max 10MB)');
+                return;
+            }
             selectedFile = file;
-            const sizeMB = (file.size / 1024 / 1024).toFixed(1);
-            fileInfo.textContent = `${file.name} (${sizeMB} MB)`;
-            fileInfo.style.display = 'block';
-            checkReady();
+            fileName.textContent = file.name;
+            submitBtn.disabled = false;
+            hideStatus();
         }
 
-        function checkReady() {
-            submitBtn.disabled = !(selectedFile && document.getElementById('fund_id').value && document.getElementById('company_id').value);
-        }
-
-        document.getElementById('fund_id').addEventListener('change', () => { loadCompanies(); checkReady(); });
-        document.getElementById('company_id').addEventListener('change', checkReady);
-
-        // Form submission
-        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+        // ─── Upload & Process ───
+        document.getElementById('uploadForm').addEventListener('submit', async e => {
             e.preventDefault();
-            const status = document.getElementById('status');
-            status.style.display = 'block';
-            status.className = 'status processing';
-            status.textContent = 'Uploading...';
-            submitBtn.disabled = true;
+            if (!selectedFile) return;
 
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-            formData.append('fund_id', document.getElementById('fund_id').value);
-            formData.append('company_id', document.getElementById('company_id').value);
-            formData.append('period', document.getElementById('period').value);
+            const companyId = document.getElementById('company').value;
+            const period = document.getElementById('period').value;
+            if (!companyId) { showStatus('error', 'Please select a company'); return; }
+            if (!period) { showStatus('error', 'Please enter a reporting period'); return; }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing…';
+            document.getElementById('progressArea').style.display = 'block';
 
             try {
-                const res = await fetch('/api/v1/ingest/upload', {
+                // Step 1: Upload
+                setStep(1, 'active');
+                setProgress(15);
+                showStatus('info', 'Uploading file…');
+
+                const formData = new FormData();
+                formData.append('company_id', companyId);
+                formData.append('fund_id', FUND_ID);
+                formData.append('period', period);
+                formData.append('file', selectedFile);
+
+                const uploadRes = await fetch('/api/v1/ingest/upload', {
                     method: 'POST',
                     headers: { 'X-API-Key': API_KEY },
                     body: formData,
                 });
-                const data = await res.json();
-                if (res.ok) {
-                    status.className = 'status success';
-                    status.textContent = `Uploaded successfully. Update ID: ${data.id}. Processing will begin shortly.`;
-                } else {
-                    status.className = 'status error';
-                    status.textContent = `Error: ${data.detail || 'Upload failed'}`;
+
+                if (!uploadRes.ok) {
+                    const err = await uploadRes.json();
+                    throw new Error(err.detail || 'Upload failed');
                 }
-            } catch (err) {
-                status.className = 'status error';
-                status.textContent = `Error: ${err.message}`;
-            }
-            submitBtn.disabled = false;
-        });
 
-        // Load funds on page load (placeholder — seed data will populate these)
-        async function loadFunds() {
-            // TODO: Fetch from API when fund CRUD is implemented
-            // For now, check if there are any funds via a simple health check
-            try {
-                const res = await fetch('/health');
-                if (res.ok) console.log('API is healthy');
-            } catch (e) {
-                console.warn('API not available:', e);
-            }
-        }
+                const update = await uploadRes.json();
+                setStep(1, 'done');
+                setProgress(35);
 
-        async function loadCompanies() {
-            const fundId = document.getElementById('fund_id').value;
-            if (!fundId) return;
-            try {
-                const res = await fetch(`/api/v1/companies?fund_id=${fundId}`, {
+                // Step 2: Process
+                setStep(2, 'active');
+                showStatus('info', 'Extracting and normalising data…');
+                setProgress(50);
+
+                const processRes = await fetch(`/api/v1/process/${update.id}`, {
+                    method: 'POST',
                     headers: { 'X-API-Key': API_KEY },
                 });
-                const companies = await res.json();
-                const select = document.getElementById('company_id');
-                select.innerHTML = '<option value="">Select company...</option>';
-                companies.forEach(c => {
-                    const opt = document.createElement('option');
-                    opt.value = c.id;
-                    opt.textContent = c.name;
-                    select.appendChild(opt);
-                });
-            } catch (e) {
-                console.warn('Failed to load companies:', e);
-            }
-        }
 
-        loadFunds();
+                if (!processRes.ok) {
+                    const err = await processRes.json();
+                    throw new Error(err.detail || 'Processing failed');
+                }
+
+                const result = await processRes.json();
+                setStep(2, 'done');
+                setStep(3, 'active');
+                setProgress(85);
+
+                // Step 3: Done
+                setStep(3, 'done');
+                setProgress(100);
+
+                const status = result.processing_status;
+                if (status === 'completed') {
+                    showStatus('success',
+                        `Successfully processed! Period: ${result.metrics_period || period}. ` +
+                        `Confidence: ${(result.llm_confidence * 100).toFixed(0)}%. ` +
+                        `<a href="/static/dashboard.html?fund_id=${FUND_ID}" style="color: #38a169; font-weight: 600;">View Dashboard →</a>`
+                    );
+                } else if (status === 'needs_review') {
+                    showStatus('info',
+                        `Processed with status: needs_review. A comptroller should review the results. ` +
+                        `<a href="/static/dashboard.html?fund_id=${FUND_ID}" style="color: #2E86C1; font-weight: 600;">View Dashboard →</a>`
+                    );
+                } else {
+                    showStatus('error', `Processing completed with status: ${status}. ${result.processing_error || ''}`);
+                }
+
+            } catch (err) {
+                showStatus('error', err.message);
+                setStep(1, 'error'); setStep(2, 'error'); setStep(3, 'error');
+            } finally {
+                submitBtn.textContent = 'Upload & Process';
+                submitBtn.disabled = false;
+            }
+        });
+
+        function showStatus(type, msg) {
+            const el = document.getElementById('status');
+            el.className = `status ${type}`;
+            el.innerHTML = msg;
+        }
+        function hideStatus() {
+            document.getElementById('status').className = 'status';
+        }
+        function setProgress(pct) {
+            document.getElementById('progressFill').style.width = pct + '%';
+        }
+        function setStep(n, state) {
+            document.getElementById('dot' + n).className = 'dot ' + state;
+        }
     </script>
 </body>
 </html>

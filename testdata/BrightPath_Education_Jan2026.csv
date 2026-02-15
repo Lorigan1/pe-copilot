@@ -8,7 +8,7 @@ Total Cost of Sales,437500.00
 Materials & Course Content,87500.00
 Instructor Costs,262500.00
 Facility Hire,87500.00
-Gross Profit,437500.00
+Gross Profit,
 Total Expenses,306250.00
 Salaries & Wages,175000.00
 Rent & Utilities,43750.00
@@ -16,7 +16,8 @@ Marketing & Advertising,35000.00
 Technology & Software,26250.00
 Depreciation,17500.00
 Insurance,8750.00
-Net Profit,131250.00
+EBITDA,
+Net Profit,
 Cash and Bank Accounts,520000.00
 Total Debt Outstanding,1100000.00
 Net Assets,1850000.00

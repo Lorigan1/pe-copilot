@@ -4,8 +4,9 @@ Covers:
   - parse_extracted_text: header detection, label mapping, multi-column, blanks
   - evaluate_formula: arithmetic, negatives, missing deps, division by zero, safety
   - apply_calculations: dependency chaining, multi-period
-  - inject_computed_values: blank fill, [COMPUTED] marker, non-blank preservation
+  - inject_computed_values: blank fill, [COMPUTED] marker, non-blank preservation, nan handling
   - Integration: full NorthStar P&L calculation chain
+  - Integration: BrightPath Education CSV (positive-cost Xero convention)
 """
 
 import pytest
@@ -583,3 +584,427 @@ class TestNorthStarIntegration:
             assert "Feb 2026" in computed[metric], f"{metric} missing Feb 2026"
             assert "Jan 2026" in computed[metric], f"{metric} missing Jan 2026"
             assert "Feb 2025" in computed[metric], f"{metric} missing Feb 2025"
+
+
+# ─── NaN handling (CSV/pandas blanks) ────────────────────────────
+
+
+class TestNanHandling:
+    """Pandas fills blank CSV cells with NaN — calculator must treat as None."""
+
+    def test_parse_numeric_nan(self):
+        assert _parse_numeric("nan") is None
+
+    def test_parse_numeric_nan_uppercase(self):
+        assert _parse_numeric("NaN") is None
+
+    def test_csv_format_with_nan_cells(self):
+        """CSV parser output uses 'nan' for blank cells."""
+        text = (
+            "=== CSV Data ===\n"
+            "Account | Jan 2026\n"
+            "----------------------------------------\n"
+            "Revenue | 875000.0\n"
+            "Cost of Sales | 437500.0\n"
+            "Gross Profit | nan\n"
+        )
+        mappings = [
+            LabelMapping(label="Revenue", metric_name="revenue"),
+            LabelMapping(label="Cost of Sales", metric_name="cost_of_sales"),
+            LabelMapping(label="Gross Profit", metric_name="gross_profit"),
+        ]
+        parsed = parse_extracted_text(text, mappings)
+        assert parsed["revenue"]["Jan 2026"] == 875000.0
+        assert parsed["cost_of_sales"]["Jan 2026"] == 437500.0
+        assert parsed["gross_profit"]["Jan 2026"] is None
+
+    def test_inject_replaces_nan_cells(self):
+        """Injection should treat 'nan' cells as blank and fill them."""
+        text = (
+            "Account | Jan 2026\n"
+            "----------------------------------------\n"
+            "Gross Profit | nan\n"
+        )
+        computed = {"gross_profit": {"Jan 2026": 437500.0}}
+        rules = [
+            CalculationRule(
+                metric_name="gross_profit",
+                source_label="Gross Profit",
+                formula="revenue - cost_of_sales",
+            ),
+        ]
+        result = inject_computed_values(text, computed, rules)
+        assert "437500 [COMPUTED]" in result
+        assert "nan" not in result
+
+    def test_separator_does_not_reset_headers(self):
+        """Dashed separator lines from CSV parser should not clear headers."""
+        text = (
+            "Account | Jan 2026\n"
+            "----------------------------------------\n"
+            "Revenue | 875000.0\n"
+        )
+        mappings = [LabelMapping(label="Revenue", metric_name="revenue")]
+        parsed = parse_extracted_text(text, mappings)
+        assert "revenue" in parsed
+        assert parsed["revenue"]["Jan 2026"] == 875000.0
+
+
+# ─── BrightPath Education integration test (Xero/CSV) ────────────
+
+
+class TestBrightPathIntegration:
+    """End-to-end test for BrightPath: Xero CSV with positive-cost convention."""
+
+    @pytest.fixture
+    def brightpath_csv_text(self):
+        """Simulates CSV parser output for BrightPath Jan 2026."""
+        return (
+            "=== CSV Data ===\n"
+            "Account | Jan 2026\n"
+            "----------------------------------------\n"
+            "Total Income | 875000.0\n"
+            "Course Fees | 620000.0\n"
+            "Corporate Training Contracts | 180000.0\n"
+            "Government Grants | 50000.0\n"
+            "Other Income | 25000.0\n"
+            "Total Cost of Sales | 437500.0\n"
+            "Materials & Course Content | 87500.0\n"
+            "Instructor Costs | 262500.0\n"
+            "Facility Hire | 87500.0\n"
+            "Gross Profit | nan\n"
+            "Total Expenses | 306250.0\n"
+            "Salaries & Wages | 175000.0\n"
+            "Rent & Utilities | 43750.0\n"
+            "Marketing & Advertising | 35000.0\n"
+            "Technology & Software | 26250.0\n"
+            "Depreciation | 17500.0\n"
+            "Insurance | 8750.0\n"
+            "EBITDA | nan\n"
+            "Net Profit | nan\n"
+            "Cash and Bank Accounts | 520000.0\n"
+            "Total Debt Outstanding | 1100000.0\n"
+            "Net Assets | 1850000.0\n"
+            "Headcount | 78.0\n"
+        )
+
+    @pytest.fixture
+    def brightpath_mappings(self):
+        return [
+            LabelMapping(label="Total Income", metric_name="revenue"),
+            LabelMapping(label="Total Cost of Sales", metric_name="cost_of_sales"),
+            LabelMapping(label="Gross Profit", metric_name="gross_profit"),
+            LabelMapping(label="Total Expenses", metric_name="total_expenses"),
+            LabelMapping(label="Depreciation", metric_name="depreciation"),
+            LabelMapping(label="EBITDA", metric_name="ebitda"),
+            LabelMapping(label="Net Profit", metric_name="net_income"),
+            LabelMapping(label="Cash and Bank Accounts", metric_name="cash_balance"),
+            LabelMapping(label="Total Debt Outstanding", metric_name="total_debt"),
+            LabelMapping(label="Net Assets", metric_name="net_assets"),
+            LabelMapping(label="Headcount", metric_name="headcount"),
+        ]
+
+    @pytest.fixture
+    def brightpath_rules(self):
+        return [
+            CalculationRule(
+                metric_name="gross_profit",
+                source_label="Gross Profit",
+                formula="revenue - cost_of_sales",
+                description="Revenue minus Cost of Sales (Xero stores costs as positive)",
+            ),
+            CalculationRule(
+                metric_name="ebitda",
+                source_label="EBITDA",
+                formula="revenue - cost_of_sales - total_expenses + depreciation",
+                description="Gross Profit minus opex plus depreciation add-back",
+            ),
+            CalculationRule(
+                metric_name="net_income",
+                source_label="Net Profit",
+                formula="revenue - cost_of_sales - total_expenses",
+                description="Revenue minus all costs",
+            ),
+        ]
+
+    def test_parsing_extracts_all_metrics(
+        self, brightpath_csv_text, brightpath_mappings,
+    ):
+        parsed = parse_extracted_text(brightpath_csv_text, brightpath_mappings)
+
+        assert parsed["revenue"]["Jan 2026"] == 875000.0
+        assert parsed["cost_of_sales"]["Jan 2026"] == 437500.0
+        assert parsed["total_expenses"]["Jan 2026"] == 306250.0
+        assert parsed["depreciation"]["Jan 2026"] == 17500.0
+        assert parsed["cash_balance"]["Jan 2026"] == 520000.0
+        assert parsed["total_debt"]["Jan 2026"] == 1100000.0
+        assert parsed["net_assets"]["Jan 2026"] == 1850000.0
+        assert parsed["headcount"]["Jan 2026"] == 78.0
+
+        # Formula cells should be None
+        assert parsed["gross_profit"]["Jan 2026"] is None
+        assert parsed["ebitda"]["Jan 2026"] is None
+        assert parsed["net_income"]["Jan 2026"] is None
+
+    def test_positive_cost_subtraction_formulas(
+        self, brightpath_csv_text, brightpath_mappings, brightpath_rules,
+    ):
+        """Xero uses positive costs — formulas must subtract, not add."""
+        parsed = parse_extracted_text(brightpath_csv_text, brightpath_mappings)
+        computed = apply_calculations(parsed, brightpath_rules)
+
+        # Gross Profit = 875,000 - 437,500 = 437,500
+        assert computed["gross_profit"]["Jan 2026"] == 437500.0
+
+        # EBITDA = 875,000 - 437,500 - 306,250 + 17,500 = 148,750
+        assert computed["ebitda"]["Jan 2026"] == 148750.0
+
+        # Net Income = 875,000 - 437,500 - 306,250 = 131,250
+        assert computed["net_income"]["Jan 2026"] == 131250.0
+
+    def test_ebitda_margin_reasonable(
+        self, brightpath_csv_text, brightpath_mappings, brightpath_rules,
+    ):
+        """EBITDA margin should be reasonable for an education company."""
+        parsed = parse_extracted_text(brightpath_csv_text, brightpath_mappings)
+        computed = apply_calculations(parsed, brightpath_rules)
+
+        revenue = parsed["revenue"]["Jan 2026"]
+        ebitda = computed["ebitda"]["Jan 2026"]
+        margin = ebitda / revenue
+
+        # 17% EBITDA margin — reasonable for education
+        assert 0.10 < margin < 0.30
+
+    def test_injection_fills_all_nan_cells(
+        self, brightpath_csv_text, brightpath_mappings, brightpath_rules,
+    ):
+        parsed = parse_extracted_text(brightpath_csv_text, brightpath_mappings)
+        computed = apply_calculations(parsed, brightpath_rules)
+        enriched = inject_computed_values(brightpath_csv_text, computed, brightpath_rules)
+
+        assert "437500 [COMPUTED]" in enriched   # Gross Profit
+        assert "148750 [COMPUTED]" in enriched   # EBITDA
+        assert "131250 [COMPUTED]" in enriched   # Net Profit
+
+        # No nan cells should remain for computed metrics
+        for line in enriched.split("\n"):
+            if "[COMPUTED]" in line:
+                assert "nan" not in line.lower()
+
+    def test_non_formula_rows_unchanged(
+        self, brightpath_csv_text, brightpath_mappings, brightpath_rules,
+    ):
+        """Rows with existing values should not be modified."""
+        parsed = parse_extracted_text(brightpath_csv_text, brightpath_mappings)
+        computed = apply_calculations(parsed, brightpath_rules)
+        enriched = inject_computed_values(brightpath_csv_text, computed, brightpath_rules)
+
+        # Revenue row should be unchanged
+        assert "Total Income | 875000.0" in enriched
+        assert "Total Cost of Sales | 437500.0" in enriched
+        assert "Headcount | 78.0" in enriched
+
+
+# ─── Helix Manufacturing integration test (PDF/QuickBooks) ───────
+
+
+class TestHelixIntegration:
+    """End-to-end test for Helix: PDF board pack with multi-table extraction."""
+
+    @pytest.fixture
+    def helix_pdf_text(self):
+        """Simulates PDF parser output for Helix Q4 2025 board pack."""
+        return (
+            "--- Text (Page 1) ---\n"
+            "HELIX MANUFACTURING LTD\n"
+            "Board Pack - Q4 2025\n"
+            "\n"
+            "--- Text (Page 2) ---\n"
+            "Executive Summary\n"
+            "Q4 2025 was a solid quarter.\n"
+            "\n"
+            "--- Table 1 (Page 3) ---\n"
+            " | Q4 2025 | Q3 2025\n"
+            "Turnover | 3,500,000 | 3,342,000\n"
+            "Cost of Goods Sold | 2,100,000 | 2,038,000\n"
+            "Gross Profit |  | \n"
+            "Operating Expenses | 735,000 | 702,000\n"
+            "EBITDA |  | \n"
+            "Depreciation & Amortisation | 112,000 | 108,000\n"
+            "Net Income |  | \n"
+            "\n"
+            "--- Table 1 (Page 4) ---\n"
+            " | Q4 2025 | Q3 2025\n"
+            "Bank & Cash | 680,000 | 590,000\n"
+            "Term Loan | 1,200,000 | 1,250,000\n"
+            "Overdraft Facility | 150,000 | 180,000\n"
+            "Total Debt |  | \n"
+            "Net Assets | 4,200,000 | 4,050,000\n"
+            "\n"
+            "--- Table 1 (Page 5) ---\n"
+            " | Q4 2025 | Q3 2025\n"
+            "Units Produced | 28,500 | 27,100\n"
+            "Capacity Utilisation | 87% | 84%\n"
+            "Headcount | 142 | 140\n"
+        )
+
+    @pytest.fixture
+    def helix_mappings(self):
+        return [
+            LabelMapping(label="Turnover", metric_name="revenue"),
+            LabelMapping(label="Cost of Goods Sold", metric_name="cogs"),
+            LabelMapping(label="Gross Profit", metric_name="gross_profit"),
+            LabelMapping(label="Operating Expenses", metric_name="operating_expenses"),
+            LabelMapping(label="EBITDA", metric_name="ebitda"),
+            LabelMapping(label="Depreciation & Amortisation", metric_name="dep_amort"),
+            LabelMapping(label="Net Income", metric_name="net_income"),
+            LabelMapping(label="Bank & Cash", metric_name="cash_balance"),
+            LabelMapping(label="Term Loan", metric_name="term_loan"),
+            LabelMapping(label="Overdraft Facility", metric_name="overdraft"),
+            LabelMapping(label="Total Debt", metric_name="total_debt"),
+            LabelMapping(label="Net Assets", metric_name="net_assets"),
+            LabelMapping(label="Units Produced", metric_name="units_produced"),
+            LabelMapping(label="Headcount", metric_name="headcount"),
+        ]
+
+    @pytest.fixture
+    def helix_rules(self):
+        return [
+            CalculationRule(
+                metric_name="gross_profit",
+                source_label="Gross Profit",
+                formula="revenue - cogs",
+                description="Turnover minus COGS",
+            ),
+            CalculationRule(
+                metric_name="ebitda",
+                source_label="EBITDA",
+                formula="gross_profit - operating_expenses",
+                description="GP minus opex",
+            ),
+            CalculationRule(
+                metric_name="net_income",
+                source_label="Net Income",
+                formula="ebitda - dep_amort",
+                description="EBITDA minus D&A",
+            ),
+            CalculationRule(
+                metric_name="total_debt",
+                source_label="Total Debt",
+                formula="term_loan + overdraft",
+                description="Term Loan plus Overdraft",
+            ),
+        ]
+
+    def test_multi_table_parsing(self, helix_pdf_text, helix_mappings):
+        """Parser should extract metrics across multiple tables/pages."""
+        parsed = parse_extracted_text(helix_pdf_text, helix_mappings)
+
+        # P&L table (page 3)
+        assert parsed["revenue"]["Q4 2025"] == 3500000.0
+        assert parsed["cogs"]["Q4 2025"] == 2100000.0
+        assert parsed["gross_profit"]["Q4 2025"] is None
+        assert parsed["operating_expenses"]["Q4 2025"] == 735000.0
+
+        # Balance sheet table (page 4)
+        assert parsed["cash_balance"]["Q4 2025"] == 680000.0
+        assert parsed["term_loan"]["Q4 2025"] == 1200000.0
+        assert parsed["overdraft"]["Q4 2025"] == 150000.0
+        assert parsed["total_debt"]["Q4 2025"] is None
+
+        # KPI table (page 5)
+        assert parsed["units_produced"]["Q4 2025"] == 28500.0
+        assert parsed["headcount"]["Q4 2025"] == 142.0
+
+    def test_quarterly_headers_detected(self, helix_pdf_text, helix_mappings):
+        """Q4 2025 and Q3 2025 headers should be detected correctly."""
+        parsed = parse_extracted_text(helix_pdf_text, helix_mappings)
+
+        assert "Q4 2025" in parsed["revenue"]
+        assert "Q3 2025" in parsed["revenue"]
+        assert parsed["revenue"]["Q3 2025"] == 3342000.0
+
+    def test_pl_calculation_chain(
+        self, helix_pdf_text, helix_mappings, helix_rules,
+    ):
+        """Full P&L chain: GP → EBITDA → NI."""
+        parsed = parse_extracted_text(helix_pdf_text, helix_mappings)
+        computed = apply_calculations(parsed, helix_rules)
+
+        # Q4 2025: GP = 3,500,000 - 2,100,000 = 1,400,000
+        assert computed["gross_profit"]["Q4 2025"] == 1400000.0
+
+        # Q4 2025: EBITDA = 1,400,000 - 735,000 = 665,000
+        assert computed["ebitda"]["Q4 2025"] == 665000.0
+
+        # Q4 2025: NI = 665,000 - 112,000 = 553,000
+        assert computed["net_income"]["Q4 2025"] == 553000.0
+
+        # Q3 2025: GP = 3,342,000 - 2,038,000 = 1,304,000
+        assert computed["gross_profit"]["Q3 2025"] == 1304000.0
+
+        # Q3 2025: EBITDA = 1,304,000 - 702,000 = 602,000
+        assert computed["ebitda"]["Q3 2025"] == 602000.0
+
+        # Q3 2025: NI = 602,000 - 108,000 = 494,000
+        assert computed["net_income"]["Q3 2025"] == 494000.0
+
+    def test_debt_calculation(
+        self, helix_pdf_text, helix_mappings, helix_rules,
+    ):
+        """Total Debt = Term Loan + Overdraft — cross-table formula."""
+        parsed = parse_extracted_text(helix_pdf_text, helix_mappings)
+        computed = apply_calculations(parsed, helix_rules)
+
+        # Q4 2025: 1,200,000 + 150,000 = 1,350,000
+        assert computed["total_debt"]["Q4 2025"] == 1350000.0
+
+        # Q3 2025: 1,250,000 + 180,000 = 1,430,000
+        assert computed["total_debt"]["Q3 2025"] == 1430000.0
+
+    def test_ebitda_margin_reasonable(
+        self, helix_pdf_text, helix_mappings, helix_rules,
+    ):
+        """EBITDA margin should be reasonable for manufacturing."""
+        parsed = parse_extracted_text(helix_pdf_text, helix_mappings)
+        computed = apply_calculations(parsed, helix_rules)
+
+        revenue = parsed["revenue"]["Q4 2025"]
+        ebitda = computed["ebitda"]["Q4 2025"]
+        margin = ebitda / revenue
+
+        # 19% EBITDA margin — reasonable for manufacturing
+        assert 0.10 < margin < 0.30
+
+    def test_injection_across_tables(
+        self, helix_pdf_text, helix_mappings, helix_rules,
+    ):
+        """Computed values should be injected into the correct table rows."""
+        parsed = parse_extracted_text(helix_pdf_text, helix_mappings)
+        computed = apply_calculations(parsed, helix_rules)
+        enriched = inject_computed_values(helix_pdf_text, computed, helix_rules)
+
+        # P&L computed values
+        assert "1400000 [COMPUTED]" in enriched   # Gross Profit Q4
+        assert "665000 [COMPUTED]" in enriched    # EBITDA Q4
+        assert "553000 [COMPUTED]" in enriched    # Net Income Q4
+
+        # Balance sheet computed value
+        assert "1350000 [COMPUTED]" in enriched   # Total Debt Q4
+
+        # Count computed markers — 4 rules × 2 periods = 8
+        assert enriched.count("[COMPUTED]") == 8
+
+    def test_qoq_variance_reasonable(
+        self, helix_pdf_text, helix_mappings, helix_rules,
+    ):
+        """Quarter-on-quarter variances should be modest (not wild swings)."""
+        parsed = parse_extracted_text(helix_pdf_text, helix_mappings)
+        computed = apply_calculations(parsed, helix_rules)
+
+        for metric in ["gross_profit", "ebitda", "net_income"]:
+            q4 = computed[metric]["Q4 2025"]
+            q3 = computed[metric]["Q3 2025"]
+            variance = (q4 - q3) / abs(q3)
+            assert abs(variance) < 0.15, f"{metric} QoQ variance {variance:.1%} too large"

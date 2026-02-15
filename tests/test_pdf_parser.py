@@ -49,47 +49,47 @@ class TestHelixPDF:
         """Helix labels revenue as 'Turnover'."""
         result = parser.parse(helix_pdf)
         assert "Turnover" in result
-        assert "3,200,000" in result
+        assert "3,500,000" in result
 
-    def test_extracts_ebitda(self, parser, helix_pdf):
+    def test_extracts_ebitda_label(self, parser, helix_pdf):
+        """EBITDA row exists (blank — formula cell for calculator to fill)."""
         result = parser.parse(helix_pdf)
         assert "EBITDA" in result
-        assert "520,000" in result
 
-    def test_extracts_gross_profit(self, parser, helix_pdf):
+    def test_extracts_gross_profit_label(self, parser, helix_pdf):
+        """Gross Profit row exists (blank — formula cell for calculator to fill)."""
         result = parser.parse(helix_pdf)
         assert "Gross Profit" in result
-        assert "1,344,000" in result
 
-    def test_extracts_net_profit(self, parser, helix_pdf):
+    def test_extracts_net_income_label(self, parser, helix_pdf):
+        """Net Income row exists (blank — formula cell for calculator to fill)."""
         result = parser.parse(helix_pdf)
-        assert "Net Profit" in result
-        assert "380,000" in result
+        assert "Net Income" in result
 
     def test_extracts_bank_and_cash(self, parser, helix_pdf):
         """Helix labels cash balance as 'Bank & Cash'."""
         result = parser.parse(helix_pdf)
         assert "Bank & Cash" in result or "Bank &amp; Cash" in result
-        assert "890,000" in result
+        assert "680,000" in result
 
-    def test_extracts_total_debt(self, parser, helix_pdf):
-        """Total debt = Term Loan (1.2M) + Overdraft (600K) = 1.8M."""
+    def test_extracts_total_debt_components(self, parser, helix_pdf):
+        """Total Debt is blank (formula), but components should be present."""
         result = parser.parse(helix_pdf)
         assert "Term Loan" in result
         assert "1,200,000" in result
         assert "Overdraft" in result
-        assert "600,000" in result
+        assert "150,000" in result
 
     def test_extracts_net_assets(self, parser, helix_pdf):
         result = parser.parse(helix_pdf)
         assert "Net Assets" in result
-        assert "2,290,000" in result
+        assert "4,200,000" in result
 
     def test_extracts_units_produced(self, parser, helix_pdf):
         """Helix's custom operational KPI."""
         result = parser.parse(helix_pdf)
         assert "Units Produced" in result
-        assert "45,200" in result
+        assert "28,500" in result
 
     def test_extracts_headcount(self, parser, helix_pdf):
         result = parser.parse(helix_pdf)
@@ -110,7 +110,7 @@ class TestHelixPDF:
     def test_prior_period_data_included(self, parser, helix_pdf):
         """Q3 2025 comparison data should also be extracted."""
         result = parser.parse(helix_pdf)
-        assert "2,960,000" in result  # Q3 Turnover
+        assert "3,342,000" in result  # Q3 Turnover
 
 
 # ─── Edge case tests ────────────────────────────────────────────

@@ -57,10 +57,12 @@ def parse_extracted_text(
     headers: list[str] = []
 
     for line in text.split("\n"):
-        # Skip section markers and separator lines
-        if line.startswith("===") or line.startswith("---") or not line.strip():
+        # Skip section markers, separator lines, and blanks
+        if line.startswith("===") or not line.strip():
             headers = []  # Reset headers on new section
             continue
+        if line.startswith("---"):
+            continue  # Visual separator — don't reset headers
 
         cells = [c.strip() for c in line.split("|")]
         if len(cells) < 2:
@@ -227,10 +229,13 @@ def inject_computed_values(
 
     for line in extracted_text.split("\n"):
         # Track section resets
-        if line.startswith("===") or line.startswith("---"):
+        if line.startswith("==="):
             headers = []
             output_lines.append(line)
             continue
+        if line.startswith("---"):
+            output_lines.append(line)
+            continue  # Visual separator — don't reset headers
 
         if not line.strip():
             output_lines.append(line)
@@ -257,7 +262,7 @@ def inject_computed_values(
             new_cells = [label]
             for i, header in enumerate(headers):
                 original = cells[i + 1].strip() if i + 1 < len(cells) else ""
-                if not original and header in period_values:
+                if (not original or original.lower() == "nan") and header in period_values:
                     # Inject computed value
                     val = period_values[header]
                     formatted = str(int(val)) if val == int(val) else f"{val:.2f}"
@@ -293,6 +298,10 @@ def _parse_numeric(raw: str) -> float | None:
     # Handle parenthesized negatives: (1000) → -1000
     if cleaned.startswith("(") and cleaned.endswith(")"):
         cleaned = "-" + cleaned[1:-1]
+
+    # Handle NaN (pandas fills blank CSV cells with "nan")
+    if cleaned.lower() == "nan":
+        return None
 
     try:
         return float(cleaned)

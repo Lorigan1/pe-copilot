@@ -237,7 +237,7 @@ class TestPDFNormalisationPipeline:
 
         # Extracted text should contain Helix's specific labels
         assert "Turnover" in result.extracted_text
-        assert "3,200,000" in result.extracted_text
+        assert "3,500,000" in result.extracted_text
         assert "Units Produced" in result.extracted_text
 
     @pytest.mark.asyncio

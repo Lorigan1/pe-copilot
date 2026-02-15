@@ -57,10 +57,10 @@ class TestBrightPathCSV:
         assert "Total Debt Outstanding" in result
         assert "1100000" in result
 
-    def test_contains_net_profit(self, parser, brightpath_csv):
+    def test_contains_net_profit_label(self, parser, brightpath_csv):
+        """Net Profit row exists (blank — formula cell for calculator to fill)."""
         result = parser.parse_csv(brightpath_csv)
         assert "Net Profit" in result
-        assert "131250" in result
 
     def test_contains_headcount(self, parser, brightpath_csv):
         result = parser.parse_csv(brightpath_csv)
