@@ -93,14 +93,14 @@ def northstar_extracted_text():
         "Profit & Loss Summary — February 2026 |  |  | \n"
         " | Feb 2026 | Jan 2026 | Feb 2025\n"
         "Net Sales | 2609250 | 2450000 | 2280000\n"
-        "Cost of Sales | -1852000 | -1715000 | -1596000\n"
+        "Cost of Sales | -1435088 | -1347500 | -1254000\n"
         "Gross Profit |  |  | \n"
-        "Warehouse & Distribution | -260900 | -245000 | -228000\n"
-        "Fleet Operating Costs | -149450 | -122500 | -114000\n"
-        "Staff Costs | -382200 | -367500 | -342000\n"
-        "Premises | -75000 | -73500 | -66000\n"
-        "Professional Fees | -9800 | -24500 | -22800\n"
-        "Other Overheads | -52200 | -49000 | -45600\n"
+        "Warehouse & Distribution | -182648 | -171500 | -159600\n"
+        "Fleet Operating Costs | -104770 | -85750 | -79800\n"
+        "Staff Costs | -313110 | -294000 | -273600\n"
+        "Premises | -54794 | -51450 | -47880\n"
+        "Professional Fees | -6850 | -17150 | -15960\n"
+        "Other Overheads | -36530 | -34300 | -31920\n"
         "Total Overheads |  |  | \n"
         "Operating Profit Before D&A |  |  | \n"
         "Depreciation | -65250 | -61250 | -57000\n"
@@ -226,8 +226,8 @@ class TestParseExtractedText:
 
         # Raw values should be parsed
         assert result["net_sales"]["Feb 2026"] == 2609250.0
-        assert result["cost_of_sales"]["Feb 2026"] == -1852000.0
-        assert result["fleet_costs"]["Feb 2026"] == -149450.0
+        assert result["cost_of_sales"]["Feb 2026"] == -1435088.0
+        assert result["fleet_costs"]["Feb 2026"] == -104770.0
 
         # Formula cells should be None
         assert result["gross_profit"]["Feb 2026"] is None
@@ -498,23 +498,26 @@ class TestNorthStarIntegration:
 
         # Verify raw data parsed correctly
         assert parsed["net_sales"]["Feb 2026"] == 2609250.0
-        assert parsed["cost_of_sales"]["Feb 2026"] == -1852000.0
+        assert parsed["cost_of_sales"]["Feb 2026"] == -1435088.0
         assert parsed["gross_profit"]["Feb 2026"] is None
 
         # Step 2: Calculate
         computed = apply_calculations(parsed, northstar_rules)
 
         # Gross Profit = Net Sales + Cost of Sales
-        assert computed["gross_profit"]["Feb 2026"] == 757250.0
-        assert computed["gross_profit"]["Jan 2026"] == 735000.0
+        assert computed["gross_profit"]["Feb 2026"] == 1174162.0
+        assert computed["gross_profit"]["Jan 2026"] == 1102500.0
 
         # Total Overheads = sum of all overhead items
-        expected_overheads_feb = -260900 + -149450 + -382200 + -75000 + -9800 + -52200
+        expected_overheads_feb = -182648 + -104770 + -313110 + -54794 + -6850 + -36530
         assert computed["total_overheads"]["Feb 2026"] == expected_overheads_feb
 
         # EBITDA = Gross Profit + Total Overheads
-        expected_ebitda_feb = 757250.0 + expected_overheads_feb
+        expected_ebitda_feb = 1174162.0 + expected_overheads_feb
         assert computed["ebitda"]["Feb 2026"] == expected_ebitda_feb
+
+        # EBITDA should be positive (realistic PE company)
+        assert expected_ebitda_feb > 0
 
         # Operating Profit = EBITDA + Depreciation + Amortisation
         expected_op_profit_feb = expected_ebitda_feb + (-65250) + (-13050)
@@ -528,7 +531,7 @@ class TestNorthStarIntegration:
         enriched = inject_computed_values(
             northstar_extracted_text, computed, northstar_rules,
         )
-        assert "757250 [COMPUTED]" in enriched
+        assert "1174162 [COMPUTED]" in enriched
         assert "[COMPUTED]" in enriched
 
         # Count injected values — should have at least 5 rules × 3 periods (where deps exist)
@@ -545,19 +548,21 @@ class TestNorthStarIntegration:
         jan_ebitda = computed["ebitda"]["Jan 2026"]
         feb_ebitda = computed["ebitda"]["Feb 2026"]
 
-        # Both should exist
+        # Both should exist and be positive
         assert jan_ebitda is not None
         assert feb_ebitda is not None
+        assert jan_ebitda > 0
+        assert feb_ebitda > 0
 
         # Manually verify Jan
-        jan_gross = 2450000.0 + (-1715000.0)  # 735000
-        jan_overheads = -245000 + -122500 + -367500 + -73500 + -24500 + -49000
+        jan_gross = 2450000.0 + (-1347500.0)  # 1,102,500
+        jan_overheads = -171500 + -85750 + -294000 + -51450 + -17150 + -34300
         jan_expected = jan_gross + jan_overheads
         assert jan_ebitda == jan_expected
 
         # Manually verify Feb
-        feb_gross = 2609250.0 + (-1852000.0)  # 757250
-        feb_overheads = -260900 + -149450 + -382200 + -75000 + -9800 + -52200
+        feb_gross = 2609250.0 + (-1435088.0)  # 1,174,162
+        feb_overheads = -182648 + -104770 + -313110 + -54794 + -6850 + -36530
         feb_expected = feb_gross + feb_overheads
         assert feb_ebitda == feb_expected
 
@@ -565,7 +570,7 @@ class TestNorthStarIntegration:
         if jan_ebitda != 0:
             variance = (feb_ebitda - jan_ebitda) / abs(jan_ebitda)
             # Should be a modest change, not a wild swing
-            assert abs(variance) < 1.0  # Less than 100% change
+            assert abs(variance) < 0.2  # Less than 20% change
 
     def test_all_periods_calculated(
         self, northstar_extracted_text, northstar_mappings, northstar_rules,
