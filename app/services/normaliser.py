@@ -13,6 +13,7 @@ from datetime import datetime
 from app.config import settings
 from app.models.llm_responses import NormalisationResponse, SummarisationResponse
 from app.models.update import ProcessingStatus, SourceFileType, Update
+from app.services import calculator
 from app.services.excel_parser import excel_parser
 from app.services.firestore import firestore_service
 from app.services.llm import llm_service
@@ -114,6 +115,11 @@ class NormaliserService:
             extracted_text = await self._extract(update)
             update.extracted_text = extracted_text
 
+            # ─── Layer 1.5: Deterministic Calculations ───
+            if company.calculation_rules:
+                logger.info("Layer 1.5: Applying deterministic calculations")
+                extracted_text = self._calculate(extracted_text, company)
+
             # ─── Layer 2: Normalise via LLM ───
             logger.info("Layer 2: Normalising via Claude")
             metric_schema = [m.model_dump() for m in company.canonical_metrics]
@@ -194,6 +200,36 @@ class NormaliserService:
         return update
 
     # ─── Layer 1: Extraction ──────────────────────────────────
+
+    def _calculate(self, extracted_text: str, company) -> str:
+        """Layer 1.5: Apply deterministic calculations to fill blank formula cells.
+
+        Uses company-specific label mappings and calculation rules to compute
+        derived metrics (e.g., Gross Profit, EBITDA) from raw line items.
+        Falls back to original text if calculation fails.
+        """
+        try:
+            parsed = calculator.parse_extracted_text(
+                extracted_text, company.label_mappings
+            )
+            computed = calculator.apply_calculations(parsed, company.calculation_rules)
+            if computed:
+                enriched = calculator.inject_computed_values(
+                    extracted_text, computed, company.calculation_rules
+                )
+                n_computed = sum(len(v) for v in computed.values())
+                logger.info(
+                    "Calculation layer: computed %d values for %s",
+                    n_computed, company.name,
+                )
+                return enriched
+            return extracted_text
+        except Exception as e:
+            logger.warning(
+                "Calculation layer failed for %s: %s. Using raw extraction.",
+                company.name, e,
+            )
+            return extracted_text
 
     async def _extract(self, update: Update) -> str:
         """Extract text from the raw file based on its type."""

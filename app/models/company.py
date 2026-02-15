@@ -4,6 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.models.calculation_rule import CalculationRule, LabelMapping
 from app.models.metric_schema import MetricDefinition
 
 
@@ -25,6 +26,8 @@ class CompanyCreate(BaseModel):
     primary_contact_email: str = ""
     reporting_contacts: list[ReportingContact] = []
     canonical_metrics: list[MetricDefinition] = []
+    label_mappings: list[LabelMapping] = []
+    calculation_rules: list[CalculationRule] = []
     mapping_instructions: str = Field(
         default="",
         description=(
@@ -49,6 +52,8 @@ class CompanyUpdate(BaseModel):
     primary_contact_email: str | None = None
     reporting_contacts: list[ReportingContact] | None = None
     canonical_metrics: list[MetricDefinition] | None = None
+    label_mappings: list[LabelMapping] | None = None
+    calculation_rules: list[CalculationRule] | None = None
     mapping_instructions: str | None = None
     reporting_frequency: str | None = None
     accounting_system: str | None = None
@@ -66,6 +71,8 @@ class Company(BaseModel):
     primary_contact_email: str = ""
     reporting_contacts: list[ReportingContact] = []
     canonical_metrics: list[MetricDefinition] = []
+    label_mappings: list[LabelMapping] = []
+    calculation_rules: list[CalculationRule] = []
     mapping_instructions: str = ""
     reporting_frequency: str = "monthly"
     accounting_system: str = ""

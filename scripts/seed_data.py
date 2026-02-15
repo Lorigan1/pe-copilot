@@ -13,6 +13,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from app.models.calculation_rule import CalculationRule, LabelMapping
 from app.models.company import CompanyCreate, ReportingContact
 from app.models.fund import FundCreate, FundSettings
 from app.models.metric_schema import DEFAULT_PE_METRICS, MetricDefinition
@@ -52,10 +53,63 @@ async def seed():
                 ),
             ],
             canonical_metrics=DEFAULT_PE_METRICS,
+            label_mappings=[
+                LabelMapping(label="Net Sales", metric_name="net_sales"),
+                LabelMapping(label="Cost of Sales", metric_name="cost_of_sales"),
+                LabelMapping(label="Gross Profit", metric_name="gross_profit"),
+                LabelMapping(label="Warehouse & Distribution", metric_name="warehouse_distribution"),
+                LabelMapping(label="Fleet Operating Costs", metric_name="fleet_costs"),
+                LabelMapping(label="Staff Costs", metric_name="staff_costs"),
+                LabelMapping(label="Premises", metric_name="premises"),
+                LabelMapping(label="Professional Fees", metric_name="professional_fees"),
+                LabelMapping(label="Other Overheads", metric_name="other_overheads"),
+                LabelMapping(label="Total Overheads", metric_name="total_overheads"),
+                LabelMapping(label="Operating Profit Before D&A", metric_name="ebitda"),
+                LabelMapping(label="Depreciation", metric_name="depreciation"),
+                LabelMapping(label="Amortisation", metric_name="amortisation"),
+                LabelMapping(label="Operating Profit", metric_name="operating_profit"),
+                LabelMapping(label="Interest Payable", metric_name="interest_payable"),
+                LabelMapping(label="Profit Before Tax", metric_name="pbt"),
+                LabelMapping(label="Net Profit", metric_name="net_income"),
+            ],
+            calculation_rules=[
+                CalculationRule(
+                    metric_name="gross_profit",
+                    source_label="Gross Profit",
+                    formula="net_sales + cost_of_sales",
+                    description="Revenue minus Cost of Sales (costs stored as negative)",
+                ),
+                CalculationRule(
+                    metric_name="total_overheads",
+                    source_label="Total Overheads",
+                    formula="warehouse_distribution + fleet_costs + staff_costs + premises + professional_fees + other_overheads",
+                    description="Sum of all overhead line items (all stored as negative)",
+                ),
+                CalculationRule(
+                    metric_name="ebitda",
+                    source_label="Operating Profit Before D&A",
+                    formula="gross_profit + total_overheads",
+                    description="Gross Profit plus Total Overheads (overheads are negative)",
+                ),
+                CalculationRule(
+                    metric_name="operating_profit",
+                    source_label="Operating Profit",
+                    formula="ebitda + depreciation + amortisation",
+                    description="EBITDA plus D&A (D&A stored as negative)",
+                ),
+                CalculationRule(
+                    metric_name="pbt",
+                    source_label="Profit Before Tax",
+                    formula="operating_profit + interest_payable",
+                    description="Operating Profit plus Interest (interest stored as negative)",
+                ),
+            ],
             mapping_instructions=(
                 "NorthStar uses Sage. Their management pack has tabs: 'P&L Summary', "
                 "'Balance Sheet', 'Cash Flow'. Revenue is labelled 'Net Sales'. "
-                "EBITDA is labelled 'Operating Profit Before D&A'."
+                "EBITDA is labelled 'Operating Profit Before D&A'. "
+                "Values marked [COMPUTED] have been pre-calculated deterministically — "
+                "use these values as-is, do not recalculate."
             ),
             reporting_frequency="monthly",
             accounting_system="Sage",
