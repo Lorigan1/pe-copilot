@@ -19,6 +19,7 @@ from app.services.firestore import firestore_service
 from app.services.llm import llm_service
 from app.services.pdf_parser import pdf_parser
 from app.services.storage import storage_service
+from app.services.validators import validate_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -155,8 +156,28 @@ class NormaliserService:
                     previous=previous.normalised_metrics,
                 )
 
+            # ─── Layer 3.5: Sanity checks ───
+            logger.info("Layer 3.5: Running deterministic metric validation")
+            validation = validate_metrics(
+                metrics=update.normalised_metrics,
+                previous_metrics=previous.normalised_metrics if previous else None,
+                variances=update.variances,
+            )
+            if validation.errors:
+                update.processing_status = ProcessingStatus.NEEDS_REVIEW
+                update.processing_error = "; ".join(validation.errors)
+            if validation.warnings:
+                logger.warning(
+                    "Metric validation warnings for %s: %s",
+                    update.id, validation.warnings,
+                )
+
             # ─── Summarise ───
-            logger.info("Generating summary via Claude")
+            logger.info("Generating summary via Claude (Haiku)")
+            validation_context = (
+                "\n\nVALIDATION WARNINGS:\n" + "\n".join(validation.warnings)
+                if validation.warnings else ""
+            )
             summary = await self._summarise(
                 company_name=company.name,
                 sector=company.sector,
@@ -164,22 +185,25 @@ class NormaliserService:
                 normalised_metrics=normalisation.metrics,
                 previous_metrics=previous.normalised_metrics if previous else {},
                 variances=update.variances,
-                raw_context=extracted_text[:3000],  # Truncate for context window
+                raw_context=extracted_text[:3000] + validation_context,  # Truncate + warnings
             )
 
             update.llm_summary = summary.summary
             update.llm_risks = summary.risks
             update.llm_action_items = summary.action_items
 
-            # Determine processing status
-            if update.llm_confidence < 0.5 or len(update.missing_metrics) > 2:
+            # Determine processing status (Layer 3.5 may have already set NEEDS_REVIEW)
+            if (
+                update.processing_status != ProcessingStatus.NEEDS_REVIEW
+                and (update.llm_confidence < 0.5 or len(update.missing_metrics) > 2)
+            ):
                 update.processing_status = ProcessingStatus.NEEDS_REVIEW
                 logger.warning(
                     "Update marked as needs_review: confidence=%.2f, missing=%d",
                     update.llm_confidence,
                     len(update.missing_metrics),
                 )
-            else:
+            elif update.processing_status != ProcessingStatus.NEEDS_REVIEW:
                 update.processing_status = ProcessingStatus.COMPLETED
 
             update.processed_at = datetime.utcnow()
@@ -305,7 +329,8 @@ class NormaliserService:
         response_dict = await llm_service.call_json(
             system_prompt=SUMMARISATION_SYSTEM_PROMPT,
             user_prompt=user_prompt,
-            model=settings.claude_model_summarisation,
+            model=settings.claude_model_fast,
+            max_tokens=2048,
         )
 
         return SummarisationResponse(**response_dict)

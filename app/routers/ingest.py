@@ -1,5 +1,6 @@
 """Ingestion endpoints — file upload and (later) email ingestion."""
 
+import hashlib
 import logging
 from pathlib import Path
 
@@ -62,6 +63,19 @@ async def upload_file(
             detail=f"File too large ({size_mb:.1f}MB). Max: {settings.max_upload_size_mb}MB",
         )
 
+    # ─── Dedup check: hash file content and look for existing match ───
+    file_hash = hashlib.sha256(contents).hexdigest()
+    existing = await firestore_service.find_duplicate_update(company_id, file_hash)
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Duplicate file detected. This file was already uploaded on "
+                f"{existing.received_at.strftime('%Y-%m-%d %H:%M')} "
+                f"(update ID: {existing.id}, status: {existing.processing_status.value})."
+            ),
+        )
+
     # ─── Step 1: Upload to GCS ───
     try:
         gcs_path = await storage_service.upload_raw_file(
@@ -89,6 +103,7 @@ async def upload_file(
             source_file_type=source_file_type,
             raw_file_urls=[gcs_path],
             metrics_period=period,
+            file_content_hash=file_hash,
         )
         update = await firestore_service.create_update(update_data)
         logger.info("Firestore update record created: %s", update.id)

@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PE CoPilot — Company Detail</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f7fa; color: #1a202c; min-height: 100vh; }
+
+        /* Header */
+        .header { background: #1B4F72; color: white; padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
+        .header h1 { font-size: 1.25rem; font-weight: 600; }
+        .header a { color: #bee3f8; text-decoration: none; font-size: 0.875rem; }
+        .header a:hover { color: white; }
+
+        /* Container */
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+
+        /* Back link */
+        .back-link { display: inline-block; margin-bottom: 1.5rem; color: #2E86C1; text-decoration: none; font-size: 0.875rem; }
+        .back-link:hover { text-decoration: underline; }
+
+        /* Profile card */
+        .profile-card { background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; border-left: 4px solid #38a169; }
+        .profile-card.amber { border-left-color: #d69e2e; }
+        .profile-card.red { border-left-color: #e53e3e; }
+        .profile-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 1.5rem; }
+        .profile-header h2 { font-size: 1.75rem; }
+        .profile-header .sector { font-size: 0.875rem; color: #a0aec0; margin-top: 0.25rem; }
+        .status-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .status-badge.green { background: #f0fff4; color: #38a169; }
+        .status-badge.amber { background: #fffff0; color: #d69e2e; }
+        .status-badge.red { background: #fff5f5; color: #e53e3e; }
+
+        .profile-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; }
+        .detail-label { font-size: 0.75rem; color: #a0aec0; text-transform: uppercase; font-weight: 600; letter-spacing: 0.025em; }
+        .detail-value { font-size: 1rem; margin-top: 0.25rem; color: #2d3748; }
+
+        .health-reasons { background: #fff5f5; border-left: 3px solid #e53e3e; padding: 1rem; border-radius: 4px; margin-top: 1.25rem; }
+        .health-reasons h4 { font-size: 0.8125rem; color: #e53e3e; margin-bottom: 0.5rem; text-transform: uppercase; }
+        .health-reasons li { font-size: 0.875rem; color: #742a2a; margin: 0.25rem 0; list-style: none; }
+
+        /* Sections */
+        .section { background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .section h3 { font-size: 1.125rem; margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 2px solid #e2e8f0; }
+
+        /* Metrics grid */
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+        .metric-card { background: #f7fafc; border-radius: 6px; padding: 1rem; border-left: 3px solid #2E86C1; }
+        .metric-card .name { font-size: 0.75rem; color: #718096; text-transform: uppercase; font-weight: 600; }
+        .metric-card .value { font-size: 1.375rem; font-weight: 700; margin-top: 0.375rem; }
+        .metric-card .variance { font-size: 0.8125rem; margin-top: 0.25rem; }
+        .variance.positive { color: #38a169; }
+        .variance.negative { color: #e53e3e; }
+
+        /* Trends table */
+        .trends-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; overflow-x: auto; display: block; }
+        .trends-table th, .trends-table td { padding: 0.625rem 0.75rem; text-align: right; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+        .trends-table th:first-child, .trends-table td:first-child { text-align: left; font-weight: 600; position: sticky; left: 0; background: white; }
+        .trends-table th { background: #f7fafc; font-weight: 600; color: #4a5568; font-size: 0.75rem; text-transform: uppercase; }
+        .trends-table td.positive { color: #38a169; }
+        .trends-table td.negative { color: #e53e3e; }
+
+        /* Risks */
+        .risk-tag { display: inline-block; background: #fff5f5; color: #c53030; font-size: 0.75rem; padding: 0.125rem 0.5rem; border-radius: 4px; margin: 0.125rem; }
+        .action-items { margin-top: 1rem; }
+        .action-items h4 { font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .action-items li { font-size: 0.875rem; color: #4a5568; margin: 0.375rem 0; margin-left: 1.25rem; }
+
+        /* Timeline */
+        .timeline { position: relative; padding-left: 2rem; }
+        .timeline::before { content: ''; position: absolute; left: 5px; top: 0; bottom: 0; width: 2px; background: #e2e8f0; }
+        .timeline-item { margin-bottom: 2rem; position: relative; }
+        .timeline-item::before { content: ''; position: absolute; left: -2rem; top: 2px; width: 12px; height: 12px; background: #2E86C1; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 0 2px #2E86C1; z-index: 1; }
+        .timeline-item.completed::before { background: #38a169; box-shadow: 0 0 0 2px #38a169; }
+        .timeline-item.needs_review::before { background: #d69e2e; box-shadow: 0 0 0 2px #d69e2e; }
+        .timeline-item.pending::before { background: #a0aec0; box-shadow: 0 0 0 2px #a0aec0; }
+        .timeline-item.failed::before { background: #e53e3e; box-shadow: 0 0 0 2px #e53e3e; }
+        .timeline-date { font-size: 0.8125rem; color: #a0aec0; font-weight: 600; }
+        .timeline-period { font-size: 1rem; font-weight: 600; margin-top: 0.125rem; }
+        .timeline-meta { font-size: 0.8125rem; color: #718096; margin-top: 0.375rem; }
+        .timeline-summary { font-size: 0.875rem; color: #4a5568; margin-top: 0.5rem; line-height: 1.5; }
+        .timeline-risks { margin-top: 0.5rem; }
+
+        /* Tasks */
+        .task-item { background: #f7fafc; border-left: 3px solid #2E86C1; padding: 1rem; margin-bottom: 0.75rem; border-radius: 4px; }
+        .task-item.high { border-left-color: #e53e3e; }
+        .task-item.medium { border-left-color: #d69e2e; }
+        .task-item.low { border-left-color: #38a169; }
+        .task-desc { font-size: 0.9375rem; font-weight: 600; }
+        .task-meta { font-size: 0.8125rem; color: #718096; margin-top: 0.25rem; }
+
+        /* Empty state */
+        .empty-state { text-align: center; padding: 3rem 1rem; color: #a0aec0; }
+        .empty-state p { font-size: 0.875rem; margin-top: 0.5rem; }
+
+        @media (max-width: 768px) {
+            .profile-header { flex-direction: column; gap: 0.75rem; }
+            .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>PE CoPilot</h1>
+        <a href="/static/dashboard.html" id="dashLink">Dashboard</a>
+        <a href="/static/upload.html" id="uploadLink">Upload</a>
+        <a href="/docs">API Docs</a>
+    </div>
+
+    <div class="container">
+        <a href="/static/dashboard.html" id="backLink" class="back-link">&larr; Back to Dashboard</a>
+
+        <!-- Loading state -->
+        <div id="loading" class="empty-state">
+            <h2>Loading...</h2>
+        </div>
+
+        <!-- Content (hidden until loaded) -->
+        <div id="content" style="display: none;">
+
+            <!-- Profile -->
+            <div class="profile-card" id="profileCard">
+                <div class="profile-header">
+                    <div>
+                        <h2 id="companyName"></h2>
+                        <div class="sector" id="companySector"></div>
+                    </div>
+                    <span class="status-badge" id="healthBadge"></span>
+                </div>
+                <div class="profile-details">
+                    <div>
+                        <div class="detail-label">Accounting System</div>
+                        <div class="detail-value" id="detailAccounting"></div>
+                    </div>
+                    <div>
+                        <div class="detail-label">Reporting Frequency</div>
+                        <div class="detail-value" id="detailFrequency"></div>
+                    </div>
+                    <div>
+                        <div class="detail-label">Last Update</div>
+                        <div class="detail-value" id="detailLastUpdate"></div>
+                    </div>
+                    <div>
+                        <div class="detail-label">Primary Contact</div>
+                        <div class="detail-value" id="detailContact"></div>
+                    </div>
+                </div>
+                <div id="healthReasons"></div>
+            </div>
+
+            <!-- Current Metrics -->
+            <div class="section">
+                <h3>Current Metrics</h3>
+                <div class="metrics-grid" id="metricsGrid">
+                    <div class="empty-state"><p>No metrics yet</p></div>
+                </div>
+            </div>
+
+            <!-- Metrics Trends -->
+            <div class="section" id="trendsSection" style="display: none;">
+                <h3>Metrics Trends</h3>
+                <div id="trendsContent"></div>
+            </div>
+
+            <!-- Risks & Action Items -->
+            <div class="section" id="risksSection" style="display: none;">
+                <h3>Risks &amp; Action Items</h3>
+                <div id="risksContent"></div>
+            </div>
+
+            <!-- Update History -->
+            <div class="section">
+                <h3>Update History</h3>
+                <div class="timeline" id="timeline">
+                    <div class="empty-state"><p>No updates yet</p></div>
+                </div>
+            </div>
+
+            <!-- Pending Tasks -->
+            <div class="section" id="tasksSection" style="display: none;">
+                <h3>Pending Tasks</h3>
+                <div id="tasksList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const API_KEY = params.get('api_key') || localStorage.getItem('pe_api_key') || prompt('Enter your API key:');
+        if (API_KEY) localStorage.setItem('pe_api_key', API_KEY);
+        const COMPANY_ID = params.get('company_id') || '';
+        const FUND_ID = params.get('fund_id') || localStorage.getItem('pe_fund_id') || '';
+
+        // Fix nav links to include fund_id
+        if (FUND_ID) {
+            document.getElementById('dashLink').href += `?fund_id=${FUND_ID}`;
+            document.getElementById('uploadLink').href += `?fund_id=${FUND_ID}`;
+            document.getElementById('backLink').href += `?fund_id=${FUND_ID}`;
+        }
+
+        function formatCurrency(val) {
+            if (val == null) return '\u2014';
+            return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(val);
+        }
+
+        function formatDate(iso) {
+            if (!iso) return 'Never';
+            return new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function formatMetricValue(name, val) {
+            if (val == null) return '\u2014';
+            if (name === 'headcount') return val.toLocaleString('en-GB');
+            if (typeof val === 'number' && Math.abs(val) >= 100) return formatCurrency(val);
+            return val.toString();
+        }
+
+        function renderVariance(v) {
+            if (v == null || v === 0) return '';
+            const sign = v > 0 ? '+' : '';
+            const cls = v > 0 ? 'positive' : 'negative';
+            return `<div class="variance ${cls}">${sign}${(v * 100).toFixed(1)}%</div>`;
+        }
+
+        function renderProfile(company) {
+            document.getElementById('companyName').textContent = company.name;
+            document.getElementById('companySector').textContent = company.sector || 'No sector';
+            document.getElementById('detailAccounting').textContent = company.accounting_system || '\u2014';
+            document.getElementById('detailFrequency').textContent = company.reporting_frequency || '\u2014';
+            document.getElementById('detailLastUpdate').textContent = formatDate(company.last_update_at);
+
+            const contact = company.primary_contact_name
+                ? `${company.primary_contact_name}${company.primary_contact_email ? ` (${company.primary_contact_email})` : ''}`
+                : '\u2014';
+            document.getElementById('detailContact').textContent = contact;
+
+            // Health badge
+            const badge = document.getElementById('healthBadge');
+            badge.className = `status-badge ${company.health_status || 'green'}`;
+            badge.textContent = company.health_status || 'green';
+
+            // Profile card border colour
+            const card = document.getElementById('profileCard');
+            card.classList.remove('amber', 'red');
+            if (company.health_status === 'amber') card.classList.add('amber');
+            if (company.health_status === 'red') card.classList.add('red');
+
+            // Health reasons
+            if (company.health_reasons && company.health_reasons.length > 0) {
+                document.getElementById('healthReasons').innerHTML = `
+                    <div class="health-reasons">
+                        <h4>Health Concerns</h4>
+                        <ul>${company.health_reasons.map(r => `<li>${r}</li>`).join('')}</ul>
+                    </div>`;
+            }
+
+            document.title = `PE CoPilot \u2014 ${company.name}`;
+        }
+
+        function renderMetrics(latestUpdate) {
+            if (!latestUpdate || !latestUpdate.normalised_metrics || Object.keys(latestUpdate.normalised_metrics).length === 0) return;
+
+            const html = Object.entries(latestUpdate.normalised_metrics).map(([name, value]) => {
+                const variance = latestUpdate.variances ? latestUpdate.variances[name] : null;
+                return `
+                    <div class="metric-card">
+                        <div class="name">${name.replace(/_/g, ' ')}</div>
+                        <div class="value">${formatMetricValue(name, value)}</div>
+                        ${renderVariance(variance)}
+                    </div>`;
+            }).join('');
+            document.getElementById('metricsGrid').innerHTML = html;
+        }
+
+        function renderTrends(metricsHistory) {
+            if (!metricsHistory || Object.keys(metricsHistory).length === 0) return;
+
+            // Get all unique periods (in order — oldest first)
+            const allPeriods = [];
+            const seen = new Set();
+            for (const entries of Object.values(metricsHistory)) {
+                for (const e of entries) {
+                    if (!seen.has(e.period)) {
+                        seen.add(e.period);
+                        allPeriods.push(e.period);
+                    }
+                }
+            }
+
+            if (allPeriods.length < 2) return; // Need at least 2 periods for trends
+
+            const headerCells = allPeriods.map(p => `<th>${p}</th>`).join('');
+
+            const rows = Object.entries(metricsHistory).map(([metric, entries]) => {
+                const byPeriod = {};
+                entries.forEach(e => { byPeriod[e.period] = e; });
+
+                const cells = allPeriods.map(p => {
+                    const entry = byPeriod[p];
+                    if (!entry || entry.value == null) return '<td>\u2014</td>';
+                    const val = formatMetricValue(metric, entry.value);
+                    const v = entry.variance;
+                    let cls = '';
+                    let suffix = '';
+                    if (v && v !== 0) {
+                        cls = v > 0 ? 'positive' : 'negative';
+                        const sign = v > 0 ? '+' : '';
+                        suffix = ` <span style="font-size:0.75rem">(${sign}${(v * 100).toFixed(1)}%)</span>`;
+                    }
+                    return `<td class="${cls}">${val}${suffix}</td>`;
+                }).join('');
+
+                return `<tr><td>${metric.replace(/_/g, ' ')}</td>${cells}</tr>`;
+            }).join('');
+
+            document.getElementById('trendsContent').innerHTML = `
+                <table class="trends-table">
+                    <thead><tr><th>Metric</th>${headerCells}</tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>`;
+            document.getElementById('trendsSection').style.display = 'block';
+        }
+
+        function renderRisks(latestUpdate) {
+            if (!latestUpdate) return;
+
+            const risks = latestUpdate.llm_risks || [];
+            const actions = latestUpdate.llm_action_items || [];
+
+            if (risks.length === 0 && actions.length === 0) return;
+
+            let html = '';
+            if (risks.length > 0) {
+                html += risks.map(r => `<span class="risk-tag">${r}</span>`).join(' ');
+            }
+            if (actions.length > 0) {
+                html += `<div class="action-items"><h4>Action Items</h4><ul>${actions.map(a => `<li>${a}</li>`).join('')}</ul></div>`;
+            }
+
+            document.getElementById('risksContent').innerHTML = html;
+            document.getElementById('risksSection').style.display = 'block';
+        }
+
+        function renderTimeline(updates) {
+            if (!updates || updates.length === 0) {
+                document.getElementById('timeline').innerHTML = '<div class="empty-state"><p>No updates yet. Upload a file to get started.</p></div>';
+                return;
+            }
+
+            const html = updates.map(u => {
+                const statusClass = u.processing_status || '';
+                const risksHtml = (u.llm_risks || []).map(r => `<span class="risk-tag">${r}</span>`).join(' ');
+                const confidence = u.llm_confidence ? `${(u.llm_confidence * 100).toFixed(0)}%` : '\u2014';
+
+                return `
+                    <div class="timeline-item ${statusClass}">
+                        <div class="timeline-date">${formatDate(u.received_at)}</div>
+                        <div class="timeline-period">${u.metrics_period || 'Unknown period'}</div>
+                        <div class="timeline-meta">
+                            ${u.source_file_type.toUpperCase()}
+                            &middot; <span style="text-transform: uppercase; font-size: 0.75rem;">${u.processing_status.replace(/_/g, ' ')}</span>
+                            &middot; Confidence: ${confidence}
+                            ${u.missing_metrics && u.missing_metrics.length > 0 ? ` &middot; ${u.missing_metrics.length} missing metric${u.missing_metrics.length > 1 ? 's' : ''}` : ''}
+                        </div>
+                        ${u.llm_summary ? `<div class="timeline-summary">${u.llm_summary}</div>` : ''}
+                        ${risksHtml ? `<div class="timeline-risks">${risksHtml}</div>` : ''}
+                    </div>`;
+            }).join('');
+            document.getElementById('timeline').innerHTML = html;
+        }
+
+        function renderTasks(tasks) {
+            if (!tasks || tasks.length === 0) return;
+
+            const html = tasks.map(t => `
+                <div class="task-item ${t.priority}">
+                    <div class="task-desc">${t.description}</div>
+                    <div class="task-meta">
+                        Priority: <strong>${t.priority}</strong>
+                        &middot; Status: ${t.status}
+                        ${t.due_date ? ` &middot; Due: ${formatDate(t.due_date)}` : ''}
+                        ${t.assigned_to ? ` &middot; Assigned to: ${t.assigned_to}` : ''}
+                    </div>
+                </div>`).join('');
+
+            document.getElementById('tasksList').innerHTML = html;
+            document.getElementById('tasksSection').style.display = 'block';
+        }
+
+        async function loadDetail() {
+            if (!COMPANY_ID || !FUND_ID) {
+                document.getElementById('loading').innerHTML =
+                    '<div class="empty-state"><h2>Missing parameters</h2><p>Add ?company_id=X&amp;fund_id=Y to the URL.</p></div>';
+                return;
+            }
+
+            try {
+                const res = await fetch(
+                    `/api/v1/companies/${COMPANY_ID}/detail?fund_id=${FUND_ID}`,
+                    { headers: { 'X-API-Key': API_KEY } }
+                );
+
+                if (!res.ok) {
+                    const msg = res.status === 404 ? 'Company not found' : `Error ${res.status}`;
+                    document.getElementById('loading').innerHTML =
+                        `<div class="empty-state"><h2>${msg}</h2></div>`;
+                    return;
+                }
+
+                const data = await res.json();
+
+                // Hide loading, show content
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+
+                // Render all sections
+                renderProfile(data.company);
+                renderMetrics(data.updates[0] || null);
+                renderTrends(data.metrics_history);
+                renderRisks(data.updates[0] || null);
+                renderTimeline(data.updates);
+                renderTasks(data.pending_tasks);
+
+            } catch (e) {
+                console.error('Failed to load detail:', e);
+                document.getElementById('loading').innerHTML =
+                    `<div class="empty-state"><h2>Error loading data</h2><p>${e.message}</p></div>`;
+            }
+        }
+
+        loadDetail();
+    </script>
+</body>
+</html>

@@ -42,6 +42,7 @@ class UpdateCreate(BaseModel):
     source_email_subject: str = ""
     raw_file_urls: list[str] = []
     metrics_period: str = ""  # e.g. "Jan 2026", "Q4 2025"
+    file_content_hash: str = ""  # SHA-256 hex digest for dedup
 
 
 class Update(BaseModel):
@@ -58,6 +59,9 @@ class Update(BaseModel):
     source_email_from: str = ""
     source_email_subject: str = ""
     raw_file_urls: list[str] = []
+
+    # Content deduplication
+    file_content_hash: str = ""  # SHA-256 hex digest of raw file
 
     # Extraction (Layer 1)
     extracted_text: str = ""

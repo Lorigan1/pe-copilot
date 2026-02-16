@@ -14,8 +14,9 @@ Your live app is at: `https://pe-copilot-api-917934808232.europe-west2.run.app`
 | `/docs` | Swagger UI — interactive API documentation |
 | `/static/dashboard.html?fund_id=FUND_ID&api_key=API_KEY` | Portfolio dashboard |
 | `/static/upload.html?api_key=API_KEY` | File upload form |
+| `/static/company-detail.html?company_id=X&fund_id=Y` | Company detail view (also accessible by clicking a dashboard card) |
 
-**Current fund ID:** `pOQXLN0E1V1clZcSDYcT` (Meridian Capital Fund III)
+**Current fund ID:** `OprI9mdcmQ9ZplIbzS0n` (Meridian Capital Fund III)
 
 ---
 
@@ -37,7 +38,7 @@ Upload file → Extract text → Normalise with Claude → Store in Firestore �
 curl -X POST \
   -H "X-API-Key: YOUR_API_KEY" \
   -F "file=@/path/to/report.xlsx" \
-  -F "fund_id=pOQXLN0E1V1clZcSDYcT" \
+  -F "fund_id=OprI9mdcmQ9ZplIbzS0n" \
   -F "company_id=COMPANY_ID" \
   -F "source_file_type=excel" \
   -F "metrics_period=Jan 2026" \
@@ -60,7 +61,24 @@ Open `/static/upload.html?api_key=YOUR_API_KEY` in your browser, select the comp
 
 **Response:** Returns an update object with `id` and `processing_status: "pending"`.
 
-### Step 2: Trigger normalisation
+### Step 2: Processing (automatic)
+
+Processing now triggers **automatically** via Pub/Sub after upload. You no longer need a separate API call.
+
+**What happens behind the scenes:**
+1. Upload publishes a message to the `file-ingestion-events` Pub/Sub topic
+2. The push subscription calls `POST /api/v1/internal/process-event`
+3. **Layer 1 (Extraction):** Downloads the file from Cloud Storage and extracts text/tables using the appropriate parser (openpyxl for Excel, pandas for CSV, pdfplumber for PDF)
+4. **Layer 1.5 (Calculation):** Applies deterministic calculation rules — fills formula cells (gross profit, EBITDA, etc.) with `[COMPUTED]` markers
+5. **Layer 2 (Normalisation):** Sends the enriched text to Claude along with the company's mapping instructions. Claude returns normalised metrics mapped to the canonical schema.
+6. **Layer 3 (Validation):** Pydantic validates the response. Variances are calculated against the previous period. A summarisation call produces executive summary, risks, and action items.
+
+**Status determination:**
+- **completed**: confidence >= 0.5 AND missing metrics <= 2
+- **needs_review**: low confidence or too many missing metrics
+- **failed**: exception during processing
+
+**Manual reprocessing** (if Pub/Sub failed or you want to re-run):
 
 ```bash
 curl -X POST \
@@ -68,26 +86,24 @@ curl -X POST \
   "https://pe-copilot-api-917934808232.europe-west2.run.app/api/v1/process/UPDATE_ID"
 ```
 
-Replace `UPDATE_ID` with the `id` from Step 1.
+**Check status** (the upload form polls this automatically):
 
-**What happens:**
-1. **Layer 1 (Extraction):** Downloads the file from Cloud Storage and extracts text/tables using the appropriate parser (openpyxl for Excel, pandas for CSV, pdfplumber for PDF)
-2. **Layer 2 (Normalisation):** Sends the extracted text to Claude along with the company's mapping instructions. Claude returns normalised metrics mapped to the canonical schema.
-3. **Layer 3 (Validation):** Pydantic validates the response. Variances are calculated against the previous period. If confidence is below 0.5 or too many metrics are missing, the status is set to `needs_review`.
-
-**Response:** Returns the full update object with normalised metrics, summary, risks, action items, and confidence score.
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://pe-copilot-api-917934808232.europe-west2.run.app/api/v1/process/UPDATE_ID/status"
+```
 
 ### Step 3: View the dashboard
 
 Open in browser:
 ```
-https://pe-copilot-api-917934808232.europe-west2.run.app/static/dashboard.html?fund_id=pOQXLN0E1V1clZcSDYcT&api_key=YOUR_API_KEY
+https://pe-copilot-api-917934808232.europe-west2.run.app/static/dashboard.html?fund_id=OprI9mdcmQ9ZplIbzS0n&api_key=YOUR_API_KEY
 ```
 
 Or via the API:
 ```bash
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://pe-copilot-api-917934808232.europe-west2.run.app/api/v1/dashboard/portfolio?fund_id=pOQXLN0E1V1clZcSDYcT"
+  "https://pe-copilot-api-917934808232.europe-west2.run.app/api/v1/dashboard/portfolio?fund_id=OprI9mdcmQ9ZplIbzS0n"
 ```
 
 ---
@@ -112,6 +128,7 @@ All endpoints require the `X-API-Key` header. Full interactive docs at `/docs`.
 | POST | `/api/v1/companies` | Create a company |
 | GET | `/api/v1/companies/{id}` | Get a company |
 | PATCH | `/api/v1/companies/{id}` | Update a company |
+| GET | `/api/v1/companies/{id}/detail?fund_id=X` | Full company detail view (profile, updates, tasks, metrics trends) |
 
 ### Ingestion
 
@@ -123,8 +140,16 @@ All endpoints require the `X-API-Key` header. Full interactive docs at `/docs`.
 
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | `/api/v1/process/{update_id}` | Trigger normalisation pipeline |
+| GET | `/api/v1/process/{update_id}/status` | Get current processing status (for polling) |
+| POST | `/api/v1/process/{update_id}` | Trigger normalisation pipeline (manual) |
 | POST | `/api/v1/process/{update_id}/review` | Mark a needs_review update as reviewed |
+
+### Internal (no API key — for GCP service callbacks)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/v1/internal/process-event` | Pub/Sub push handler — auto-processes uploads |
+| POST | `/api/v1/internal/staleness-check?fund_id=X` | Cloud Scheduler — creates tasks for stale companies |
 
 ### Dashboard
 
@@ -146,9 +171,9 @@ All endpoints require the `X-API-Key` header. Full interactive docs at `/docs`.
 
 | Company | ID | Sector | Expected file type |
 |---|---|---|---|
-| NorthStar Logistics | `1jstxqLHoqLKtetqNUWP` | Logistics & Distribution | Excel (.xlsx) |
-| BrightPath Education | `CxsMSU8KTbmuY4sXGAlY` | Education & Training | CSV (.csv) |
-| Helix Manufacturing | `hLoHWgzh9C2oJ0Fngc2S` | Manufacturing | PDF (.pdf) |
+| NorthStar Logistics | `3kRa7txt35WweOzO6LL6` | Logistics & Distribution | Excel (.xlsx) |
+| BrightPath Education | `L6UNvXfxNuCC7cKEJ2Ku` | Education & Training | CSV (.csv) |
+| Helix Manufacturing | `IpO2rgie3TdoldUcQXE7` | Manufacturing | PDF (.pdf) |
 
 ---
 
@@ -232,7 +257,7 @@ curl -X POST \
   -H "X-API-Key: YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "fund_id": "pOQXLN0E1V1clZcSDYcT",
+    "fund_id": "OprI9mdcmQ9ZplIbzS0n",
     "name": "NewCo Ltd",
     "sector": "Technology",
     "primary_contact_name": "Jane Smith",

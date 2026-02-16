@@ -12,7 +12,12 @@ from app.models.company import Company, CompanyCreate, CompanyUpdate
 from app.models.fund import Fund, FundCreate, FundUpdate
 from app.models.task import Task, TaskCreate, TaskStatus, TaskUpdate
 from app.models.update import ProcessingStatus, Update, UpdateCreate
-from app.models.dashboard import CompanySnapshot, PortfolioView
+from app.models.dashboard import (
+    CompanyDetailView,
+    CompanySnapshot,
+    PortfolioView,
+    UpdateSummaryDetail,
+)
 
 
 class FirestoreService:
@@ -139,6 +144,22 @@ class FirestoreService:
         async for doc in docs:
             updates.append(Update(**doc.to_dict()))
         return updates
+
+    async def find_duplicate_update(
+        self, company_id: str, file_hash: str
+    ) -> Update | None:
+        """Check if a file with this content hash already exists for the company."""
+        if not file_hash:
+            return None
+        query = (
+            self.client.collection("updates")
+            .where("company_id", "==", company_id)
+            .where("file_content_hash", "==", file_hash)
+            .limit(1)
+        )
+        async for doc in query.stream():
+            return Update(**doc.to_dict())
+        return None
 
     async def get_previous_update(self, company_id: str, before_id: str) -> Update | None:
         """Get the most recent completed update before a given one."""
@@ -274,6 +295,74 @@ class FirestoreService:
             companies_red=red,
             companies=snapshots,
         )
+
+    # ─── Company Detail ────────────────────────────────────────
+
+    async def get_company_detail_view(
+        self, company_id: str, fund_id: str
+    ) -> CompanyDetailView:
+        """Build the complete company detail view.
+
+        Aggregates company profile, update history, pending tasks,
+        and metric trends into a single payload for the detail page.
+        """
+        company = await self.get_company(company_id)
+        if not company:
+            raise ValueError(f"Company {company_id} not found")
+
+        # Fetch updates (newest first)
+        updates = await self.list_updates(fund_id, company_id, limit=50)
+
+        # Fetch pending + in-progress tasks
+        pending = await self.list_tasks(fund_id, company_id, status="pending")
+        in_progress = await self.list_tasks(fund_id, company_id, status="in_progress")
+        active_tasks = pending + in_progress
+
+        # Build metric trend history from completed updates
+        completed = [u for u in updates if u.processing_status == ProcessingStatus.COMPLETED]
+        metrics_history = self._build_metrics_history(completed[:12])
+
+        # Convert to lightweight summaries (strip extracted_text)
+        update_summaries = [
+            UpdateSummaryDetail(
+                id=u.id,
+                received_at=u.received_at,
+                source_file_type=u.source_file_type,
+                metrics_period=u.metrics_period,
+                processing_status=u.processing_status,
+                llm_confidence=u.llm_confidence,
+                llm_summary=u.llm_summary,
+                llm_risks=u.llm_risks,
+                llm_action_items=u.llm_action_items,
+                normalised_metrics=u.normalised_metrics,
+                variances=u.variances,
+                missing_metrics=u.missing_metrics,
+            )
+            for u in updates
+        ]
+
+        return CompanyDetailView(
+            company=company,
+            updates=update_summaries,
+            pending_tasks=active_tasks,
+            metrics_history=metrics_history,
+        )
+
+    def _build_metrics_history(
+        self, updates: list[Update]
+    ) -> dict[str, list[dict]]:
+        """Build metric trend data from updates (oldest first for charting)."""
+        history: dict[str, list[dict]] = {}
+        for update in reversed(updates):  # Reverse to get oldest first
+            for metric_name, value in update.normalised_metrics.items():
+                if metric_name not in history:
+                    history[metric_name] = []
+                history[metric_name].append({
+                    "period": update.metrics_period,
+                    "value": value,
+                    "variance": update.variances.get(metric_name, 0.0),
+                })
+        return history
 
 
 # Singleton — import this throughout the app

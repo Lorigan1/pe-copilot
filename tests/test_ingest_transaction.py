@@ -52,6 +52,7 @@ class TestIngestTransactionSafety:
     ):
         """If GCS upload fails, no Firestore record should be created."""
         mock_storage.upload_raw_file = AsyncMock(side_effect=Exception("GCS unavailable"))
+        mock_firestore.find_duplicate_update = AsyncMock(return_value=None)
 
         response = client.post(
             "/api/v1/ingest/upload",
@@ -75,6 +76,7 @@ class TestIngestTransactionSafety:
             return_value="gs://pe-copilot-raw-uploads/f1/c1/20260215_report.xlsx"
         )
         mock_storage.delete_file = AsyncMock()
+        mock_firestore.find_duplicate_update = AsyncMock(return_value=None)
         mock_firestore.create_update = AsyncMock(side_effect=Exception("Firestore write failed"))
 
         response = client.post(
@@ -100,6 +102,7 @@ class TestIngestTransactionSafety:
         mock_storage.upload_raw_file = AsyncMock(
             return_value="gs://pe-copilot-raw-uploads/f1/c1/20260215_report.xlsx"
         )
+        mock_firestore.find_duplicate_update = AsyncMock(return_value=None)
         mock_firestore.create_update = AsyncMock(return_value=_make_update("upd-123"))
         mock_pubsub.publish_file_ingestion_event = AsyncMock(
             side_effect=Exception("Pub/Sub topic not found")
@@ -129,6 +132,7 @@ class TestIngestTransactionSafety:
         mock_storage.upload_raw_file = AsyncMock(
             return_value="gs://pe-copilot-raw-uploads/f1/c1/20260215_report.xlsx"
         )
+        mock_firestore.find_duplicate_update = AsyncMock(return_value=None)
         mock_firestore.create_update = AsyncMock(return_value=_make_update("upd-456"))
         mock_pubsub.publish_file_ingestion_event = AsyncMock(return_value="msg-789")
 

@@ -1,6 +1,13 @@
 """Pydantic models for the dashboard views."""
 
+from datetime import datetime
+from typing import Any
+
 from pydantic import BaseModel
+
+from app.models.company import Company
+from app.models.task import Task
+from app.models.update import ProcessingStatus, SourceFileType
 
 
 class CompanySnapshot(BaseModel):
@@ -29,3 +36,29 @@ class PortfolioView(BaseModel):
     companies_amber: int
     companies_red: int
     companies: list[CompanySnapshot]
+
+
+class UpdateSummaryDetail(BaseModel):
+    """Update detail for the company timeline (excludes bulky extracted_text)."""
+
+    id: str
+    received_at: datetime
+    source_file_type: SourceFileType
+    metrics_period: str = ""
+    processing_status: ProcessingStatus = ProcessingStatus.PENDING
+    llm_confidence: float = 0.0
+    llm_summary: str = ""
+    llm_risks: list[str] = []
+    llm_action_items: list[str] = []
+    normalised_metrics: dict[str, float | int | None] = {}
+    variances: dict[str, float] = {}
+    missing_metrics: list[str] = []
+
+
+class CompanyDetailView(BaseModel):
+    """Complete company detail payload — profile, updates, tasks, and trends."""
+
+    company: Company
+    updates: list[UpdateSummaryDetail]
+    pending_tasks: list[Task]
+    metrics_history: dict[str, list[dict[str, Any]]]

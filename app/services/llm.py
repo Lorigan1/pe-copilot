@@ -65,7 +65,10 @@ class LLMService:
             return self._cache[cache_key]
 
         # Call Claude
-        logger.info("Calling Claude (%s), prompt ~%d chars", model, len(user_prompt))
+        logger.info(
+            "LLM call: model=%s, est_input_tokens=~%d, max_output=%d",
+            model, len(user_prompt) // 4, max_tokens,
+        )
         message = self.client.messages.create(
             model=model,
             max_tokens=max_tokens,
