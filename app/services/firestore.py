@@ -337,6 +337,7 @@ class FirestoreService:
                 normalised_metrics=u.normalised_metrics,
                 variances=u.variances,
                 missing_metrics=u.missing_metrics,
+                raw_file_urls=u.raw_file_urls,
             )
             for u in updates
         ]

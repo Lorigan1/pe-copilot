@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
-from app.routers import companies, dashboard, digest, export, ingest, process, tasks
+from app.routers import companies, dashboard, digest, export, files, ingest, process, tasks
 
 # ─── Logging ───
 logging.basicConfig(
@@ -37,6 +37,7 @@ app.include_router(tasks.internal_router)
 app.include_router(dashboard.router)
 app.include_router(digest.router)
 app.include_router(export.router)
+app.include_router(files.router)
 
 # ─── Static files (upload form + dashboard) ───
 _static_dir = Path(__file__).parent / "static"

@@ -19,6 +19,8 @@ from app.services.firestore import firestore_service
 from app.services.llm import llm_service
 from app.services.pdf_parser import pdf_parser
 from app.services.storage import storage_service
+from app.services.email_sender import email_sender
+from app.services.health_scorer import health_scorer
 from app.services.validators import validate_metrics
 
 logger = logging.getLogger(__name__)
@@ -208,11 +210,38 @@ class NormaliserService:
 
             update.processed_at = datetime.utcnow()
 
-            # Update company's last_update_at
+            # ─── Health scoring ───
+            logger.info("Scoring company health for %s", company.name)
+            company.last_update_at = datetime.utcnow()
+            previous_health = company.health_status
+
+            new_status, reasons = health_scorer.score(
+                company=company,
+                latest_variances=update.variances,
+                latest_missing_metrics=update.missing_metrics,
+            )
+            company.health_status = new_status
+            company.health_reasons = reasons
+
             await firestore_service.update_company(
                 update.company_id,
-                type("_", (), {"model_dump": lambda self: {"last_update_at": datetime.utcnow()}})(),
+                type("_", (), {"model_dump": lambda self, **kw: {
+                    "last_update_at": company.last_update_at,
+                    "health_status": new_status,
+                    "health_reasons": reasons,
+                }})(),
             )
+
+            # Track if health status changed (for alert emails)
+            if previous_health != new_status:
+                logger.warning(
+                    "Health status changed for %s: %s → %s (reasons: %s)",
+                    company.name, previous_health, new_status, reasons,
+                )
+                update._health_changed = True
+                update._previous_health = previous_health
+            else:
+                update._health_changed = False
 
         except Exception as e:
             logger.exception("Processing failed for update %s", update.id)
@@ -221,6 +250,29 @@ class NormaliserService:
 
         # Save final state
         await firestore_service.save_update(update)
+
+        # ─── Send alert email if health changed ───
+        if getattr(update, "_health_changed", False):
+            try:
+                fund = await firestore_service.get_fund(company.fund_id)
+                recipient = fund.manager_email if fund else ""
+                fund_name = fund.name if fund else "Unknown Fund"
+
+                if recipient:
+                    await email_sender.send_health_alert(
+                        recipient_email=recipient,
+                        company_name=company.name,
+                        previous_status=getattr(update, "_previous_health", "green"),
+                        new_status=company.health_status,
+                        reasons=company.health_reasons,
+                        fund_name=fund_name,
+                    )
+            except Exception as email_exc:
+                logger.error(
+                    "Failed to send health alert for %s: %s",
+                    company.name, email_exc,
+                )
+
         return update
 
     # ─── Layer 1: Extraction ──────────────────────────────────

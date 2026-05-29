@@ -224,6 +224,21 @@
             return `<div class="variance ${cls}">${sign}${(v * 100).toFixed(1)}%</div>`;
         }
 
+        async function downloadFile(gcsUrl) {
+            try {
+                const res = await fetch(
+                    `/api/v1/files/download?gcs_url=${encodeURIComponent(gcsUrl)}`,
+                    { headers: { 'X-API-Key': API_KEY } }
+                );
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                window.open(data.download_url, '_blank');
+            } catch (e) {
+                console.error('Download failed:', e);
+                alert('Failed to generate download link. Please try again.');
+            }
+        }
+
         function renderProfile(company) {
             document.getElementById('companyName').textContent = company.name;
             document.getElementById('companySector').textContent = company.sector || 'No sector';
@@ -366,6 +381,7 @@
                         </div>
                         ${u.llm_summary ? `<div class="timeline-summary">${u.llm_summary}</div>` : ''}
                         ${risksHtml ? `<div class="timeline-risks">${risksHtml}</div>` : ''}
+                        ${u.raw_file_urls && u.raw_file_urls.length > 0 ? `<div class="timeline-download"><a href="#" onclick="downloadFile('${u.raw_file_urls[0]}'); return false;" style="color: #2E75B6; font-size: 0.85rem; text-decoration: none;">&#x2B07; Download original file</a></div>` : ''}
                     </div>`;
             }).join('');
             document.getElementById('timeline').innerHTML = html;

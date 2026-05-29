@@ -53,6 +53,7 @@ class UpdateSummaryDetail(BaseModel):
     normalised_metrics: dict[str, float | int | None] = {}
     variances: dict[str, float] = {}
     missing_metrics: list[str] = []
+    raw_file_urls: list[str] = []  # GCS paths — UI uses /api/v1/files/download endpoint
 
 
 class CompanyDetailView(BaseModel):
