@@ -1,9 +1,6 @@
 """Tests for Layer 3.5 — deterministic financial metric validation."""
 
-import pytest
-
 from app.services.validators import (
-    MetricValidationResult,
     validate_metrics,
 )
 

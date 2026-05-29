@@ -10,7 +10,7 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 
-class ProcessingStatus(str, Enum):
+class ProcessingStatus(str, Enum):  # noqa: UP042  # noqa: UP042
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
@@ -18,13 +18,13 @@ class ProcessingStatus(str, Enum):
     FAILED = "failed"
 
 
-class SourceType(str, Enum):
+class SourceType(str, Enum):  # noqa: UP042  # noqa: UP042
     MANUAL_UPLOAD = "manual_upload"
     EMAIL = "email"
     API = "api"
 
 
-class SourceFileType(str, Enum):
+class SourceFileType(str, Enum):  # noqa: UP042  # noqa: UP042
     EXCEL = "excel"
     CSV = "csv"
     PDF = "pdf"

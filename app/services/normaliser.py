@@ -14,13 +14,13 @@ from app.config import settings
 from app.models.llm_responses import NormalisationResponse, SummarisationResponse
 from app.models.update import ProcessingStatus, SourceFileType, Update
 from app.services import calculator
+from app.services.email_sender import email_sender
 from app.services.excel_parser import excel_parser
 from app.services.firestore import firestore_service
+from app.services.health_scorer import health_scorer
 from app.services.llm import llm_service
 from app.services.pdf_parser import pdf_parser
 from app.services.storage import storage_service
-from app.services.email_sender import email_sender
-from app.services.health_scorer import health_scorer
 from app.services.validators import validate_metrics
 
 logger = logging.getLogger(__name__)

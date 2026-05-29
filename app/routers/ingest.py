@@ -35,7 +35,7 @@ async def upload_file(
     company_id: str = Form(...),
     fund_id: str = Form(...),
     period: str = Form(default=""),
-    file: UploadFile = File(...),
+    file: UploadFile = File(...),  # noqa: B008  # noqa: B008
 ) -> Update:
     """Upload a financial report file for processing.
 

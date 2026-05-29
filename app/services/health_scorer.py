@@ -4,10 +4,9 @@ Rule-based for MVP. Phase 3 could add ML-based scoring.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from app.models.company import Company
-from app.models.metric_schema import MetricDefinition
 
 logger = logging.getLogger(__name__)
 

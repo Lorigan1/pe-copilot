@@ -7,7 +7,7 @@ import pytest
 
 from app.models.company import Company
 from app.models.metric_schema import DEFAULT_PE_METRICS
-from app.models.update import ProcessingStatus, SourceFileType, SourceType, Update
+from app.models.update import SourceFileType, SourceType, Update
 
 
 def _make_company(health_status="green", days_since_update=5):
@@ -86,7 +86,7 @@ class TestHealthScoringInNormaliser:
             mock_parser.parse_excel = MagicMock(return_value="Revenue | 1000000")
 
             service = NormaliserService()
-            result = await service.process_update(update)
+            await service.process_update(update)
 
         # The company should have been updated with health status
         assert mock_firestore.update_company.called
@@ -142,11 +142,11 @@ class TestHealthScoringInNormaliser:
             mock_parser.parse_excel = MagicMock(return_value="Revenue | -500")
 
             service = NormaliserService()
-            result = await service.process_update(update)
+            processed = processed = await service.process_update(update)
 
         # Health should have changed (many missing required metrics + bad data)
         # Email sender should have been called
-        if getattr(result, "_health_changed", False):
+        if getattr(processed, "_health_changed", False):
             mock_email.send_health_alert.assert_called_once()
             call_kwargs = mock_email.send_health_alert.call_args
             assert call_kwargs[1]["recipient_email"] == "mgr@example.com" or \
@@ -197,7 +197,7 @@ class TestHealthScoringInNormaliser:
             mock_parser.parse_excel = MagicMock(return_value="Revenue | 1000000")
 
             service = NormaliserService()
-            result = await service.process_update(update)
+            await service.process_update(update)
 
         # No health change → no email
         mock_email.send_health_alert.assert_not_called()

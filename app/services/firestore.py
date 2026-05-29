@@ -9,15 +9,15 @@ from typing import Any
 
 from app.config import settings
 from app.models.company import Company, CompanyCreate, CompanyUpdate
-from app.models.fund import Fund, FundCreate, FundUpdate
-from app.models.task import Task, TaskCreate, TaskStatus, TaskUpdate
-from app.models.update import ProcessingStatus, Update, UpdateCreate
 from app.models.dashboard import (
     CompanyDetailView,
     CompanySnapshot,
     PortfolioView,
     UpdateSummaryDetail,
 )
+from app.models.fund import Fund, FundCreate, FundUpdate
+from app.models.task import Task, TaskCreate, TaskStatus, TaskUpdate
+from app.models.update import ProcessingStatus, Update, UpdateCreate
 
 
 class FirestoreService:

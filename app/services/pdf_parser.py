@@ -50,8 +50,8 @@ class PDFParser:
                         # Add text that seems like commentary (not just numbers)
                         lines = text.strip().split("\n")
                         commentary = [
-                            l for l in lines
-                            if len(l) > 30 and not all(c in "0123456789,. |$£€%" for c in l.strip())
+                            line for line in lines
+                            if len(line) > 30 and not all(c in "0123456789,. |$£€%" for c in line.strip())
                         ]
                         if commentary:
                             page_sections.append(

@@ -1,5 +1,7 @@
 """Tests for the email sender service."""
 
+from unittest.mock import patch
+
 import pytest
 
 from app.services.email_sender import EmailSender
@@ -7,9 +9,12 @@ from app.services.email_sender import EmailSender
 
 @pytest.fixture
 def sender():
-    """Create a fresh EmailSender instance (not configured — will log only)."""
-    s = EmailSender()
-    return s
+    """Create a fresh EmailSender instance with SendGrid disabled."""
+    with patch("app.services.email_sender.settings") as mock_settings:
+        mock_settings.sendgrid_api_key = ""
+        mock_settings.sendgrid_from_email = "noreply@test.com"
+        s = EmailSender()
+        yield s
 
 
 class TestHealthAlert:

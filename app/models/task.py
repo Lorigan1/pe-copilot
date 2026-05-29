@@ -6,13 +6,13 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 
-class TaskStatus(str, Enum):
+class TaskStatus(str, Enum):  # noqa: UP042  # noqa: UP042
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     DONE = "done"
 
 
-class TaskPriority(str, Enum):
+class TaskPriority(str, Enum):  # noqa: UP042  # noqa: UP042
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"

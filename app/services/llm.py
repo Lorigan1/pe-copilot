@@ -142,7 +142,7 @@ class LLMService:
         if text.startswith("```"):
             lines = text.split("\n")
             # Remove first line (```json or ```) and last line (```)
-            lines = [l for l in lines if not l.strip().startswith("```")]
+            lines = [line for line in lines if not line.strip().startswith("```")]
             text = "\n".join(lines).strip()
 
         return json.loads(text)

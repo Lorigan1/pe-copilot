@@ -3,7 +3,6 @@
 Uses BrightPath Education (Xero CSV export) as the reference case.
 """
 
-import io
 from pathlib import Path
 
 import pytest

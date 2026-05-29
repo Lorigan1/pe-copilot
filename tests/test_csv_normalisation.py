@@ -7,8 +7,6 @@ without hitting external APIs. Verifies that:
 3. The LLM response is validated and stored correctly (Layer 3)
 """
 
-import json
-from datetime import datetime
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 

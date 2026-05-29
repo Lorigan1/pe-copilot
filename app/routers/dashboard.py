@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends
 
 from app.dependencies import verify_api_key
-from app.models.dashboard import CompanySnapshot, PortfolioView
+from app.models.dashboard import PortfolioView
 from app.services.firestore import firestore_service
 
 router = APIRouter(

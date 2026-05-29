@@ -1,0 +1,311 @@
+diff --git a/app/models/fund.py b/app/models/fund.py
+index efc629c..9bf139d 100644
+--- a/app/models/fund.py
++++ b/app/models/fund.py
+@@ -2,7 +2,7 @@
+ 
+ from datetime import datetime
+ 
+-from pydantic import BaseModel, EmailStr, Field
++from pydantic import BaseModel, Field
+ 
+ 
+ class FundSettings(BaseModel):
+diff --git a/app/models/task.py b/app/models/task.py
+index bcffee4..0f4bc83 100644
+--- a/app/models/task.py
++++ b/app/models/task.py
+@@ -6,13 +6,13 @@ from enum import Enum
+ from pydantic import BaseModel, Field
+ 
+ 
+-class TaskStatus(str, Enum):
++class TaskStatus(str, Enum):  # noqa: UP042
+     PENDING = "pending"
+     IN_PROGRESS = "in_progress"
+     DONE = "done"
+ 
+ 
+-class TaskPriority(str, Enum):
++class TaskPriority(str, Enum):  # noqa: UP042
+     HIGH = "high"
+     MEDIUM = "medium"
+     LOW = "low"
+diff --git a/app/models/update.py b/app/models/update.py
+index a242877..1afd9fa 100644
+--- a/app/models/update.py
++++ b/app/models/update.py
+@@ -10,7 +10,7 @@ from enum import Enum
+ from pydantic import BaseModel, Field
+ 
+ 
+-class ProcessingStatus(str, Enum):
++class ProcessingStatus(str, Enum):  # noqa: UP042
+     PENDING = "pending"
+     PROCESSING = "processing"
+     COMPLETED = "completed"
+@@ -18,13 +18,13 @@ class ProcessingStatus(str, Enum):
+     FAILED = "failed"
+ 
+ 
+-class SourceType(str, Enum):
++class SourceType(str, Enum):  # noqa: UP042
+     MANUAL_UPLOAD = "manual_upload"
+     EMAIL = "email"
+     API = "api"
+ 
+ 
+-class SourceFileType(str, Enum):
++class SourceFileType(str, Enum):  # noqa: UP042
+     EXCEL = "excel"
+     CSV = "csv"
+     PDF = "pdf"
+diff --git a/app/routers/dashboard.py b/app/routers/dashboard.py
+index 51d93c6..c0e4465 100644
+--- a/app/routers/dashboard.py
++++ b/app/routers/dashboard.py
+@@ -3,7 +3,7 @@
+ from fastapi import APIRouter, Depends
+ 
+ from app.dependencies import verify_api_key
+-from app.models.dashboard import CompanySnapshot, PortfolioView
++from app.models.dashboard import PortfolioView
+ from app.services.firestore import firestore_service
+ 
+ router = APIRouter(
+diff --git a/app/routers/ingest.py b/app/routers/ingest.py
+index d8ab9d7..c86f57e 100644
+--- a/app/routers/ingest.py
++++ b/app/routers/ingest.py
+@@ -35,7 +35,7 @@ async def upload_file(
+     company_id: str = Form(...),
+     fund_id: str = Form(...),
+     period: str = Form(default=""),
+-    file: UploadFile = File(...),
++    file: UploadFile = File(...),  # noqa: B008
+ ) -> Update:
+     """Upload a financial report file for processing.
+ 
+diff --git a/app/services/excel_parser.py b/app/services/excel_parser.py
+index 23fb9aa..01d7c6e 100644
+--- a/app/services/excel_parser.py
++++ b/app/services/excel_parser.py
+@@ -46,7 +46,7 @@ class ExcelParser:
+ 
+             # Format as a readable table
+             section = f"=== Sheet: {sheet_name} ===\n"
+-            for i, row in enumerate(rows):
++            for _i, row in enumerate(rows):
+                 section += " | ".join(cell.strip() for cell in row) + "\n"
+ 
+             sections.append(section)
+diff --git a/app/services/firestore.py b/app/services/firestore.py
+index b166a62..be0e9af 100644
+--- a/app/services/firestore.py
++++ b/app/services/firestore.py
+@@ -9,15 +9,15 @@ from typing import Any
+ 
+ from app.config import settings
+ from app.models.company import Company, CompanyCreate, CompanyUpdate
+-from app.models.fund import Fund, FundCreate, FundUpdate
+-from app.models.task import Task, TaskCreate, TaskStatus, TaskUpdate
+-from app.models.update import ProcessingStatus, Update, UpdateCreate
+ from app.models.dashboard import (
+     CompanyDetailView,
+     CompanySnapshot,
+     PortfolioView,
+     UpdateSummaryDetail,
+ )
++from app.models.fund import Fund, FundCreate, FundUpdate
++from app.models.task import Task, TaskCreate, TaskStatus, TaskUpdate
++from app.models.update import ProcessingStatus, Update, UpdateCreate
+ 
+ 
+ class FirestoreService:
+diff --git a/app/services/health_scorer.py b/app/services/health_scorer.py
+index e3a72e1..2f74f0b 100644
+--- a/app/services/health_scorer.py
++++ b/app/services/health_scorer.py
+@@ -4,10 +4,9 @@ Rule-based for MVP. Phase 3 could add ML-based scoring.
+ """
+ 
+ import logging
+-from datetime import datetime, timedelta
++from datetime import datetime
+ 
+ from app.models.company import Company
+-from app.models.metric_schema import MetricDefinition
+ 
+ logger = logging.getLogger(__name__)
+ 
+diff --git a/app/services/llm.py b/app/services/llm.py
+index 851cc56..9a3b381 100644
+--- a/app/services/llm.py
++++ b/app/services/llm.py
+@@ -142,7 +142,7 @@ class LLMService:
+         if text.startswith("```"):
+             lines = text.split("\n")
+             # Remove first line (```json or ```) and last line (```)
+-            lines = [l for l in lines if not l.strip().startswith("```")]
++            lines = [line for line in lines if not line.strip().startswith("```")]
+             text = "\n".join(lines).strip()
+ 
+         return json.loads(text)
+diff --git a/app/services/normaliser.py b/app/services/normaliser.py
+index cf1fd0c..8b3e127 100644
+--- a/app/services/normaliser.py
++++ b/app/services/normaliser.py
+@@ -14,13 +14,13 @@ from app.config import settings
+ from app.models.llm_responses import NormalisationResponse, SummarisationResponse
+ from app.models.update import ProcessingStatus, SourceFileType, Update
+ from app.services import calculator
++from app.services.email_sender import email_sender
+ from app.services.excel_parser import excel_parser
+ from app.services.firestore import firestore_service
++from app.services.health_scorer import health_scorer
+ from app.services.llm import llm_service
+ from app.services.pdf_parser import pdf_parser
+ from app.services.storage import storage_service
+-from app.services.email_sender import email_sender
+-from app.services.health_scorer import health_scorer
+ from app.services.validators import validate_metrics
+ 
+ logger = logging.getLogger(__name__)
+diff --git a/app/services/pdf_parser.py b/app/services/pdf_parser.py
+index dfbded9..99c27ca 100644
+--- a/app/services/pdf_parser.py
++++ b/app/services/pdf_parser.py
+@@ -50,8 +50,8 @@ class PDFParser:
+                         # Add text that seems like commentary (not just numbers)
+                         lines = text.strip().split("\n")
+                         commentary = [
+-                            l for l in lines
+-                            if len(l) > 30 and not all(c in "0123456789,. |$£€%" for c in l.strip())
++                            line for line in lines
++                            if len(line) > 30 and not all(c in "0123456789,. |$£€%" for c in line.strip())
+                         ]
+                         if commentary:
+                             page_sections.append(
+diff --git a/tests/test_calculator.py b/tests/test_calculator.py
+index 71c9cd2..d550820 100644
+--- a/tests/test_calculator.py
++++ b/tests/test_calculator.py
+@@ -20,7 +20,6 @@ from app.services.calculator import (
+     parse_extracted_text,
+ )
+ 
+-
+ # ─── Fixtures ─────────────────────────────────────────────────────
+ 
+ 
+diff --git a/tests/test_csv_normalisation.py b/tests/test_csv_normalisation.py
+index 4cb5b7e..6a3f954 100644
+--- a/tests/test_csv_normalisation.py
++++ b/tests/test_csv_normalisation.py
+@@ -7,8 +7,6 @@ without hitting external APIs. Verifies that:
+ 3. The LLM response is validated and stored correctly (Layer 3)
+ """
+ 
+-import json
+-from datetime import datetime
+ from pathlib import Path
+ from unittest.mock import AsyncMock, patch
+ 
+diff --git a/tests/test_csv_parser.py b/tests/test_csv_parser.py
+index 3a1df76..7064a71 100644
+--- a/tests/test_csv_parser.py
++++ b/tests/test_csv_parser.py
+@@ -3,7 +3,6 @@
+ Uses BrightPath Education (Xero CSV export) as the reference case.
+ """
+ 
+-import io
+ from pathlib import Path
+ 
+ import pytest
+diff --git a/tests/test_dedup.py b/tests/test_dedup.py
+index 32371e0..f940fa1 100644
+--- a/tests/test_dedup.py
++++ b/tests/test_dedup.py
+@@ -174,9 +174,10 @@ class TestFindDuplicateUpdate:
+ 
+     def test_no_hash_returns_none(self):
+         """Empty hash should short-circuit and return None."""
+-        from app.services.firestore import FirestoreService
+         import asyncio
+ 
++        from app.services.firestore import FirestoreService
++
+         service = FirestoreService()
+         result = asyncio.get_event_loop().run_until_complete(
+             service.find_duplicate_update("c1", "")
+diff --git a/tests/test_health_integration.py b/tests/test_health_integration.py
+index b0d3e26..a26134d 100644
+--- a/tests/test_health_integration.py
++++ b/tests/test_health_integration.py
+@@ -7,7 +7,7 @@ import pytest
+ 
+ from app.models.company import Company
+ from app.models.metric_schema import DEFAULT_PE_METRICS
+-from app.models.update import ProcessingStatus, SourceFileType, SourceType, Update
++from app.models.update import SourceFileType, SourceType, Update
+ 
+ 
+ def _make_company(health_status="green", days_since_update=5):
+@@ -86,7 +86,7 @@ class TestHealthScoringInNormaliser:
+             mock_parser.parse_excel = MagicMock(return_value="Revenue | 1000000")
+ 
+             service = NormaliserService()
+-            result = await service.process_update(update)
++            await service.process_update(update)
+ 
+         # The company should have been updated with health status
+         assert mock_firestore.update_company.called
+@@ -197,7 +197,7 @@ class TestHealthScoringInNormaliser:
+             mock_parser.parse_excel = MagicMock(return_value="Revenue | 1000000")
+ 
+             service = NormaliserService()
+-            result = await service.process_update(update)
++            await service.process_update(update)
+ 
+         # No health change → no email
+         mock_email.send_health_alert.assert_not_called()
+diff --git a/tests/test_model_tiering.py b/tests/test_model_tiering.py
+index b74014e..ad2d91c 100644
+--- a/tests/test_model_tiering.py
++++ b/tests/test_model_tiering.py
+@@ -2,8 +2,6 @@
+ 
+ from unittest.mock import AsyncMock, patch
+ 
+-import pytest
+-
+ from app.config import settings
+ from app.services.normaliser import NormaliserService
+ 
+diff --git a/tests/test_storage.py b/tests/test_storage.py
+index a43d076..a5c5014 100644
+--- a/tests/test_storage.py
++++ b/tests/test_storage.py
+@@ -9,7 +9,6 @@ from app.services.storage import (
+     StorageUploadError,
+ )
+ 
+-
+ # ─── Custom Exceptions ───
+ 
+ 
+diff --git a/tests/test_validators.py b/tests/test_validators.py
+index 7134a92..1832063 100644
+--- a/tests/test_validators.py
++++ b/tests/test_validators.py
+@@ -1,9 +1,6 @@
+ """Tests for Layer 3.5 — deterministic financial metric validation."""
+ 
+-import pytest
+-
+ from app.services.validators import (
+-    MetricValidationResult,
+     validate_metrics,
+ )
+ 

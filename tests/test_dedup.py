@@ -174,8 +174,9 @@ class TestFindDuplicateUpdate:
 
     def test_no_hash_returns_none(self):
         """Empty hash should short-circuit and return None."""
-        from app.services.firestore import FirestoreService
         import asyncio
+
+        from app.services.firestore import FirestoreService
 
         service = FirestoreService()
         result = asyncio.get_event_loop().run_until_complete(

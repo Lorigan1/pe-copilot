@@ -46,7 +46,7 @@ class ExcelParser:
 
             # Format as a readable table
             section = f"=== Sheet: {sheet_name} ===\n"
-            for i, row in enumerate(rows):
+            for _i, row in enumerate(rows):
                 section += " | ".join(cell.strip() for cell in row) + "\n"
 
             sections.append(section)

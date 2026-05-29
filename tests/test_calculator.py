@@ -20,7 +20,6 @@ from app.services.calculator import (
     parse_extracted_text,
 )
 
-
 # ─── Fixtures ─────────────────────────────────────────────────────
 
 
