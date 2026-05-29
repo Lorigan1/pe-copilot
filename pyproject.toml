@@ -44,6 +44,8 @@ dev = [
     "ruff>=0.8.0",
     "mypy>=1.13.0",
     "httpx>=0.27.0",       # For FastAPI TestClient
+    "reportlab>=4.0",      # For PDF edge-case tests
+    "reportlab>=4.0",      # For PDF edge-case tests
 ]
 
 [build-system]

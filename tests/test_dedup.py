@@ -172,14 +172,11 @@ class TestDuplicateDetection:
 class TestFindDuplicateUpdate:
     """Unit tests for the FirestoreService.find_duplicate_update method."""
 
-    def test_no_hash_returns_none(self):
+    @pytest.mark.asyncio
+    async def test_no_hash_returns_none(self):
         """Empty hash should short-circuit and return None."""
-        import asyncio
-
         from app.services.firestore import FirestoreService
 
         service = FirestoreService()
-        result = asyncio.get_event_loop().run_until_complete(
-            service.find_duplicate_update("c1", "")
-        )
+        result = await service.find_duplicate_update("c1", "")
         assert result is None
