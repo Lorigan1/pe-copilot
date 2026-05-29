@@ -71,3 +71,7 @@ python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+exclude = ["testdata*"]
